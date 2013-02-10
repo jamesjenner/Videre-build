@@ -1,0 +1,1029 @@
+/*
+ * Videre style sheet
+ * Copyright (c) 2012 James G Jenner
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see http://www.gnu.org/licenses/
+ */
+
+/*
+@charset "utf-8";
+*/
+/* load the web symbols font */
+/*
+@font-face {
+    font-family: 'WebSymbolsRegular';
+    src: url('assets/fonts/WebSymbols-Regular-webfont.eot');
+    src: url('assets/fonts/WebSymbols-Regular-webfont.eot?#iefix') format('embedded-opentype'),
+         url('assets/fonts/WebSymbols-Regular-webfont.woff') format('woff'),
+         url('assets/fonts/WebSymbols-Regular-webfont.ttf') format('truetype'),
+         url('assets/fonts/WebSymbols-Regular-webfont.svg#WebSymbolsRegular') format('svg');
+    font-weight: normal;
+    font-style: normal;
+}
+*/
+
+
+/* the following is to stop flickering issues on android, however it is messing up zlayer selection under chrome */
+* {
+     margin: 0 auto;
+    /* -webkit-transform: translateZ(0); */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* reset everything */
+body,div,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,h6,pre,form,fieldset,input,textarea,p,blockquote,th,td { 
+	margin:0;
+	padding:0;
+}
+
+html {
+	height: 100%;
+	width: 100%;
+	overflow: hidden;
+}
+
+body {
+	position: absolute;
+	height: 100%;
+	width: 100%;
+}
+
+div.mainApplication {
+	position: absolute;
+	height: 100%;
+	width: 100%;
+	left: 0;
+	top: 0;
+}
+
+div.applicationContents {
+	position: absolute;
+	top: 0;
+	left: 0;
+	height: 100%;
+	width: 100%;
+	visibility: hidden;
+}
+
+/* remove if the slider is removed */
+div.sliderContent {
+	position: relative;
+}
+
+canvas.controlCanvas {
+	height: 100%;
+	width: 100%;
+	background: #000;
+}
+
+div.content {
+	background-color: #8D8D8D;
+	height: 100%;
+	width: 100%;
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: larger;
+	color: white;
+	display: block;
+}
+
+div.centered {
+	/* Firefox */
+	display:-moz-box;
+	-moz-box-orient:horizontal;
+	-moz-box-pack:center;
+	-moz-box-align:center;
+	
+	/* Safari and Chrome */
+	display:-webkit-box;
+	-webkit-box-orient:horizontal;
+	-webkit-box-pack:center;
+	-webkit-box-align:center;
+	
+	/* W3C */
+	display:box;
+	box-orient:horizontal;
+	box-pack:center;
+	box-align:center;
+}
+
+div.message {
+	display: table;
+	text-align: center;
+	vertical-align: middle;
+	height: 100%;
+	width: 100%;
+}
+
+div.messageContents {
+	display: table-cell;
+	text-align: center;
+	vertical-align: middle;
+	height: 100%;
+	width: 100%;
+}
+
+div.contentSlider {
+	width:100%;
+	position: absolute;
+	/* top is to be the height of the task bar, refer taskBar */
+	top: 40px;
+	left: 0;
+	bottom: 0;
+}
+
+div.formContainer {
+	width:100%;
+	position: absolute;
+	/* top is to be the height of the task bar, refer taskBar */
+	top: 40px;
+	left: 0;
+	bottom: 0;
+}
+
+div.sliderWrapper {
+	width:100%;
+	height: 100%;
+	top:0px;
+	left:0px;
+	display: table;
+}
+
+
+div.boxLayout {
+	display:-moz-box; /* Firefox */
+	display:-webkit-box; /* Safari and Chrome */
+	display:box;
+}
+
+div.flex {
+	-moz-box-flex:1.0; /* Firefox */
+	-webkit-box-flex:1.0; /* Safari and Chrome */
+	box-flex:1.0;
+}
+
+div.noflex {
+	-moz-box-flex:0.0; /* Firefox */
+	-webkit-box-flex:0.0; /* Safari and Chrome */
+	box-flex:0.0;
+}
+
+.airplaneMapIcon {
+	background-Image: url(assets/icons/drawable-xhdpi-v11/ic_action_airplane.png);
+	height: 64px;
+	width: 64px;
+	filter: invert(100%);
+	-webkit-filter: invert(100%);
+	-moz-filter: invert(100%);
+	-o-filter: invert(100%);
+	-ms-filter: invert(100%);
+}
+
+.surfaceMapIcon {
+	background-Image: url(assets/icons/drawable-xhdpi-v11/ic_action_surface.png);
+	height: 64px;
+	width: 64px;
+	filter: invert(100%);
+	-webkit-filter: invert(100%);
+	-moz-filter: invert(100%);
+	-o-filter: invert(100%);
+	-ms-filter: invert(100%);
+}
+
+.submersibleMapIcon {
+	background-Image: url(assets/icons/drawable-xhdpi-v11/ic_action_submersible.png);
+	height: 64px;
+	width: 64px;
+	filter: invert(100%);
+	-webkit-filter: invert(100%);
+	-moz-filter: invert(100%);
+	-o-filter: invert(100%);
+	-ms-filter: invert(100%);
+}
+
+.leaflet-control-layers-toggle {
+	background-image: url(assets/img/layers.png);
+}
+.leaflet-container {
+	cursor: auto;
+}
+
+
+div.taskBar {
+	top: 0;
+	left: 0;
+	background-color: black;
+	width: 100%;
+	height: 40px;
+	position: absolute;
+}
+
+div.modalBarAction {
+	height: 100%;
+}
+
+div.modalContents {
+	z-index: 1000;
+}
+
+
+div.actionBarAction {
+	height: 100%;
+	padding-left: 30px;
+}
+div.actionBarActionDisabled {
+	opacity: .5;
+}
+
+img.actionBarImage {
+	vertical-align: middle;
+	cursor: hand;
+	cursor: pointer;
+}
+
+span.actionBarText {
+	height: 100%;
+	padding-right: 20px;
+	font-size: medium;
+	cursor: hand;
+	cursor: pointer;
+}
+
+div.actionBarText {
+	
+}
+
+div.sidebarPanel {
+	height: 100%;
+	width: 40px;
+	cursor: hand;
+	cursor: pointer;
+}
+
+div.title {
+	height: 100%;
+	width: 150px;
+	
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: larger;
+	color: white;
+
+	/* Firefox */
+	display:-moz-box;
+	-moz-box-align:center;
+	
+	/* Safari and Chrome */
+	display:-webkit-box;
+	-webkit-box-align:center;
+	
+	/* W3C */
+	display:box;
+	box-align:center;
+	
+	cursor: hand;
+	cursor: pointer;
+}
+
+div.tabBar {
+	height: 100%;
+}
+
+div.formContents {
+	background: white;
+	color: #333333;
+	height: 100%;
+	width: 100%;
+}
+
+form span {
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: medium;
+	color: #333333;
+}
+
+form label {
+	width: 200px;
+	margin-top: 3px;
+	display: inline-block;
+	float: left;
+	padding: 3px;
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: small;
+	color: #333333;
+}
+
+form input[type="submit"], input[type="reset"], input[type="cancel"], input[type="button"] {
+	border-width: 1px;
+	border-style: solid;
+	border-top-color: #CCCCCC;
+	border-left-color: #CCCCCC;
+	border-right-color: #CCCCCC;
+	border-bottom-color: #333333;
+	padding-bottom: 5px;
+	padding-top: 5px;
+	padding-left: 25px;
+	padding-right: 25px;
+	color: #333333;
+	font-size: medium;
+	background-color: #CCCCCC;
+	margin-left: 30px;
+	bottom: 30px;
+}
+
+form input[type="checkbox"] {
+	float: left;
+	margin-top: 7px;
+	margin-left: 20px;
+}
+
+form span.checkboxLabel {
+	font-size: small;
+	margin-left: 3px;
+}
+
+form input[type="text"], input[type="number"], input[type="popup"], input[type="popup"]:focus {
+	border-top: none;
+	border-left: none;
+	border-right: none;
+	border-bottom: solid 1px #333333;
+	font-size: medium;
+	color-background: #CCCCCC;
+}
+
+textarea[readonly="readonly"], textarea[readonly] {
+}
+
+form input[type="text"][readonly="readonly"],
+	input[type="text"][readonly],
+	input[type="number"][readonly="readonly"],
+	input[type="number"][readonly],
+	input[type="popup"][readonly="readonly"],
+	input[type="popup"][readonly]
+	{
+	outline: none;
+	border-top: none;
+	border-left: none;
+	border-right: none;
+	border-bottom: none;
+	background: white;
+}
+
+
+input[type="popup"], input[type="popup"]:focus {
+	border-top: none;
+	border-left: none;
+	border-right: none;
+	border-bottom: solid 1px #333333;
+	font-size: medium;
+	color-background: #CCCCCC;
+}
+
+
+input[type="popup"], input[type="popup"]:focus {
+	outline: none;
+}
+
+
+form input[type="text"]:focus, input[type="number"]:focus  {
+	outline: none;
+	border-width: 1px;
+	border-left: none;
+	border-right: none;
+	border-image: none;
+	border-bottom: solid 2px #33B5E5;
+}
+
+
+form input[type="checkbox"] {
+	outline: none;
+	border: solid 1px #CCCCCC;
+}
+
+
+form {
+	width: 90%;
+	margin-left: 5%;
+	height: 100%;
+}
+
+form ul {
+	width: 100%;
+	height: 100%;
+	list-style: none;
+	list-style-position: outside;
+	margin: 0px;
+	padding: 0px;
+}
+
+form li {
+	padding: 12px;
+	position: relative;
+}
+
+form li.breakTop {
+	border-top: 1px solid #CCCCCC;
+	margin-top: 3px;
+}
+
+form li.breakBottom {
+	border-bottom: 1px solid #CCCCCC;
+	margin-bottom: 3px;
+}
+
+form li.alignbottom {
+	/* todo: absolute or fixed still seem to reposition on keyboard display for android */
+	position: fixed;
+	bottom: 31px;
+	padding-bottom: 30px;
+}
+
+/* switch iOS style for checkbox - refer http://vxjs.org/switch.html */
+.switch {
+	float: right;
+	height: 28px;
+	width: 77px;
+	border: 1px solid #979797;
+	border-radius: 20px;
+	margin-top: -5px;
+	box-shadow: inset 0 1px 3px #BABABA, inset 0 12px 3px 2px rgba(232, 232, 232, 0.5);
+	cursor: pointer;
+	overflow: hidden;
+}
+.switch input[type=checkbox] {
+	display: none;
+}
+.switch::before {
+	content: "";
+	display: block;
+	height: 28px;
+	width: 0px;
+	position: absolute;
+	border-radius: 20px;
+	-webkit-box-shadow: inset 0 1px 2px #0063B7, inset 0 12px 3px 2px rgba(0, 127, 234, 0.5);
+	box-shadow: inset 0 1px 2px #0063B7, inset 0 12px 3px 2px rgba(0, 127, 234, 0.5);
+	background-color: #64B1F2;
+}
+.switch.on::before {
+	width: 77px;
+}
+.switch > .thumb {
+	display: block;
+	width: 26px;
+	height: 26px;
+	margin-left: 0px;
+	position: relative;
+	top: 0;
+	z-index: 3;
+	border: solid 1px #919191;
+	border-radius: 28px;
+	box-shadow: inset 0 2px 1px white, inset 0 -2px 1px white;
+	background-color: #CECECE;
+	background-image: -webkit-linear-gradient(#CECECE, #FBFBFB);
+	background-image: -moz-linear-gradient(#CECECE, #FBFBFB);
+	background-image: -o-linear-gradient(#CECECE, #FBFBFB);
+	-o-transition: all 0.125s ease-in-out;
+	-webkit-transition: all 0.125s ease-in-out;
+	-moz-transition: all 0.125s ease-in-out;
+	-o-transform: translateX(0px);
+	-webkit-transform: translate3d(0,0,0);
+	-moz-transform: translateX(0px);
+}
+.switch.on > .thumb {
+	-webkit-transform: translate3d(49px,0,0);
+	-o-transform: translateX(49px);
+	-moz-transform: translateX(49px);
+}
+.switch:hover > .thumb {
+	box-shadow: inset 0 2px 1px #fff, inset 0 -2px 1px #fff;
+	background-image: none;
+}
+.switch > .thumb::before {
+	content: "";
+	display: block;
+	height: 14px;
+	width: 2px;
+	background-color: white;
+	box-shadow: 0px -1px 1px #666;
+	border: none;
+	position: absolute;
+	top: 6px;
+	left: -24px;
+}
+.switch > .thumb::after {
+	content: "";
+	display: block;
+	height: 10px;
+	width: 10px;
+	border-radius: 10px;
+	border: solid 2px #777;
+	position: absolute;
+	right: -32px;
+	top: 6px;
+}
+
+/* end switch for iOS style for checkbox */
+
+/* map css */
+.map {
+	/*
+	height: 400px;
+	width: 600px;
+	*/
+	position: absolute;
+	/* note that the top is set based on the height of a action bar */
+	top: 40px;
+	bottom: 0;
+	/* height: 100%; */
+	width: 100%;
+	color: black;
+}
+
+/* end map css */
+
+
+div.tabControl {
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: medium;
+	color: #9E9E9E;
+	height: 100%;
+	width: 160px;
+	padding-left: 20px;
+	padding-right: 20px;
+	border-bottom-style: solid;
+	border-bottom-color: #33B5E5;
+	border-bottom-width: 2px;
+	padding-top: 2px;
+	/*
+	margin-left: 1px;
+	margin-right: 1px;
+	*/
+	
+	box-sizing:border-box;
+	-moz-box-sizing:border-box; /* Firefox */
+	-webkit-box-sizing:border-box; /* Safari */
+
+	/* could use box-flex: 1.0, but it doesn't distribute the same
+	 * width. Maybe best option is the table layout... */
+}
+
+/* only required if using flex to setup widths */
+div.tabPad {
+	height: 100%;
+	-moz-box-flex:10.0; /* Firefox */
+	-webkit-box-flex:10.0; /* Safari and Chrome */
+	box-flex:10.0;
+}
+
+div.tabDivider {
+	width: 1px;
+	/*
+	 * should be able to use percentage for the margin-top, but according
+	 * to the w3c spec, % for margin-top is based on container's width,
+	 * not height (so damn annoying). So using hardcoding the values.
+	 * Would like to use:
+	 * height: 60%;
+	 * margin-top: 20%;
+	 */
+	height: 20px;
+	margin-top: 10px;
+	background-color: #525252;
+}
+
+div.tabSelected {
+	color: white;
+	border-bottom-width: 5px;
+	padding-top: 5px;
+}
+	
+div.mainApplicationOverlay {
+	position: absolute;
+	top: 0;
+	height: 100%;
+	width: 100%;
+}
+
+div.sideBar {
+	position: absolute;
+	top: 0;
+	left: 0px;
+	width: 250px;
+	height: 100%;
+	background-color: #757578;
+	background-color: #5e5e5e;
+	display: block;
+}
+
+div.rightSidebar {
+	right: 0px;
+	left: auto;
+}
+
+div.sidebarControlBar {
+	width: 245px;
+	height: 40px;
+	padding-top: 5px;
+	padding-bottom: 5px;
+	border-left-width: 5px;
+	border-left-style: solid;
+	border-left-color: rgba(0, 0, 0, 0.0);
+	cursor: hand;
+	cursor: pointer;
+}
+
+div.sidebarControlActive {
+	background-color: #292929;
+	border-left-color: #33B5E5;
+}
+
+div.sidebarGroupHeading {
+	height: 20px;
+	padding-left: 10px;
+	padding-right: 10px;
+	margin-top: 15px;
+	margin-bottom: 5px;
+	float: none;
+	width: 100%;
+	
+	box-sizing: border-box;
+	ms-box-sizing: border-box;
+	webkit-box-sizing: border-box;
+	moz-box-sizing: border-box;
+}
+
+div.sidebarGroupTitle {
+	width: 100%;
+	height: 100%;
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: small;
+	text-transform:uppercase;
+	width: 100%;
+	color: #acacac;
+	border-bottom-color: #acacac;
+	border-bottom-style: solid;
+	border-bottom-width: 2px;
+	box-sizing:border-box;
+	-moz-box-sizing:border-box; /* Firefox */
+	-webkit-box-sizing:border-box; /* Safari */
+}
+
+div.leftSidebarGroupHeading {
+	float: none;
+}
+
+div.sidebarControl {
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: medium;
+	width: 100%;
+	color: white;
+
+	box-sizing:border-box;
+	-moz-box-sizing:border-box; /* Firefox */
+	-webkit-box-sizing:border-box; /* Safari */
+	float: left;
+}
+
+div.sidebarControlIcon {
+	color: white;
+	height: 100%;
+	width: 40px;
+
+	margin-left: 10px;
+	box-sizing:border-box;
+	-moz-box-sizing:border-box; /* Firefox */
+	-webkit-box-sizing:border-box; /* Safari */
+	float: left;
+}
+
+img.sidebarControlIcon {
+	width: 100%;
+	height: 100%;
+}
+
+div.sidebarControlText {
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: medium;
+	height: 100%;
+	color: white;
+	margin-left: 10px;
+	box-sizing:border-box;
+	-moz-box-sizing:border-box; /* Firefox */
+	-webkit-box-sizing:border-box; /* Safari */
+	float: left;
+}
+
+
+
+/* the toolbar */
+div.toolbarControl {
+  top: 0;
+  right: -250px;
+  width: 265px;
+  height: 100%;
+  z-index: 899;
+  padding: 0px;
+  background-color: rgba(0, 0, 0, 0.0);
+  display: block;
+  position: absolute;
+}
+
+div.toolbar {
+  top: 0;
+  right: 0px;
+  width: 250px;
+  height: 100%;
+  z-index: 900;
+  padding: 0px;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: block;
+  position: absolute;
+  
+  border-top-left-radius: 5px;
+  -moz-border-top-left-radius: 5px;
+   
+  border-bottom-left-radius: 5px;
+  -moz-border-bottom-left-radius: 5px;
+}
+
+div.toolbarAccess
+{
+    background-color: rgba(0, 0, 0, 0.75);
+    height: 70%;
+    width: 15px;
+    top: 15%;
+    left: 0px;
+    position: absolute;
+    z-index: 900;
+
+    border-top-left-radius: 10px;
+    -moz-border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+    -moz-border-bottom-left-radius: 10px;
+}
+
+div.toolbarAccessBar
+{
+    position: absolute;
+    height: 90%;
+    top: 5%;
+    right: 35%;
+    width: 30%;
+    
+    border-radius: 50%;
+    -moz-border-radius: 50%;
+}
+
+.toolbarAccessBarInactive
+{
+    /* Safari 4-5, Chrome 1-9 */
+    background: -webkit-gradient(linear, left top, right top, from(#555555), to(#999999));
+  
+    /* Safari 5.1, Chrome 10+ */
+    background: -webkit-linear-gradient(left, #555555, #999999); 
+    
+    /* Firefox 3.6+ */
+    background: -moz-linear-gradient(left, #555555, #999999);
+  
+    /* IE 10 */
+    background: -ms-linear-gradient(left, #555555, #999999);
+  
+    /* Opera 11.10+ */
+    background: -o-linear-gradient(left, #555555, #999999);    
+}
+
+.toolbarAccessBarActive
+{
+    /* Safari 4-5, Chrome 1-9 */
+    background: -webkit-gradient(linear, left top, right top, from(#00009), to(#2299FF));
+  
+    /* Safari 5.1, Chrome 10+ */
+    background: -webkit-linear-gradient(left, #00009F, #2299FF); 
+    
+    /* Firefox 3.6+ */
+    background: -moz-linear-gradient(left, #00009F, #2299FF);
+  
+    /* IE 10 */
+    background: -ms-linear-gradient(left, #00009F, #2299FF);
+  
+    /* Opera 11.10+ */
+    background: -o-linear-gradient(left, #00009F, #2299FF);    
+}
+
+.controlBar {
+    background-color: rgba(24, 24, 24, 0.90);
+    color: #ffffff;
+    height: 48px;
+    width: 100%;
+
+    border-top-style:solid;
+    border-top-color: #272727;
+    border-top-width:1px;
+    border-bottom-style:solid;
+    border-bottom-color: #0d0d0d;
+    border-bottom-width:1px;
+
+    box-sizing:border-box;
+    -moz-box-sizing:border-box; /* Firefox */
+    -webkit-box-sizing:border-box; /* Safari */
+    position:relative;
+    /* float: left; */
+    /* do we need to use rgba so we can set transparency as appropriate? Need to check that solid style doesn't override alpha on background color */
+}
+
+.controlIcon {
+    /* margin-top: 1px;  */  
+    /* margin-left: 2px;  */
+    width: 48px;
+    height: 48px; 
+}
+
+.controlIconArea {
+    background-color: #222222;
+
+    border-top-style:solid;
+    border-top-color: #2f2f2f;
+    border-top-width:1px;
+    border-bottom-style:solid;
+    border-bottom-color: #1d1d1d;
+    border-bottom-width:1px;
+    height: 100%;
+    width: 48px;
+    float: left;
+    position:absolute;
+    left:0;
+    top:0;
+    
+  box-sizing:border-box;
+  -moz-box-sizing:border-box; /* Firefox */
+  -webkit-box-sizing:border-box; /* Safari */
+    float: left;
+}
+
+.controlIconAreaSelected {
+    background-color: #222222;
+
+    border-top-style:solid;
+    border-top-color: #2f2f2f;
+    border-top-width:1px;
+    border-bottom-style:solid;
+    border-bottom-color: #33b5e5;
+    border-bottom-width:4px;
+    height: 100%;
+    width: 48px;
+    float: left;
+    position:absolute;
+    left:0;
+    top:0;
+    
+    box-sizing:border-box;
+    -moz-box-sizing:border-box; /* Firefox */
+    -webkit-box-sizing:border-box; /* Safari */
+    float: left;
+}
+
+
+
+.controlText {
+    font-family: Arial, Helvetica, sans-serif ;
+    color: #ffffff;
+    height: 100%;
+    width: 75%;
+    float: left;
+    position:absolute;
+    left:48px;
+    top:0;
+    
+    padding-left: 10px;
+    padding-top: 4px;
+}
+
+.controlName {
+    font-size: medium;
+}
+
+.controlSubText {
+    font-size: x-small;
+}
+
+
+
+.controlToggle {
+  box-sizing:border-box;
+  -moz-box-sizing:border-box; /* Firefox */
+  -webkit-box-sizing:border-box; /* Safari */
+    width: 24px;
+    float: right;
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
+.controlToggleImage {
+    margin-top: 4px;    
+    width: 24px;
+    height: 24px;
+}
+
+a.toolbarButton {
+    position: relative;
+    text-decoration: none;
+    outline: none;
+}
+
+.toolbarButtonImage {
+    margin-top: 10px;
+    margin-left: 5px;
+    width: 20%;
+}
+
+.viewPanel {
+	width: 150px;
+	height: 150px;
+	margin: 5px;
+        z-index: 299;
+	background-color:#FCFCFC;
+	font-weight: normal;
+	font-size: 10px;
+	color: #000000;
+/*	border:1px solid #CACACA; */
+/*        box-shadow: 0px 5px 10px #CACACA; */
+        box-shadow: 0px 3px 5px rgba(0, 0, 0, 0.36);
+	-moz-border-radius: 10px;
+	-webkit-border-radius: 10px;
+	border-radius:10px;
+	text-align: center;
+	display: none;
+	overflow: hidden;
+}
+
+div.gaugeIconTitle {
+        position: absolute;
+        left: 0;
+        bottom: 20px;
+        width: 100%;
+        text-align: center;
+        color: #D5D5D5;
+        text-decoration: bold;
+        text-shadow: 0 0 3px black;
+}
+.gaugeImage {
+        z-index: 250;
+}
+
+.gaugeOverlay {
+        position: absolute;
+	top: 0;
+	left: 0;
+}
+
+.gaugeBackground {
+	z-index: 250;
+}
+
+.gaugeNeedle {
+	z-index: 251;
+}
+
+.gaugeNeedle1 {
+	z-index: 251;
+}
+
+.gaugeNeedle2 {
+	z-index: 252;
+}
+
+.gaugeNeedle3 {
+	z-index: 253;
+}
+
+.gaugeNeedle4 {
+	z-index: 254;
+}
+
+.gaugeForeground {
+	z-index: 260;
+}
+
+.gaugeDrag {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+	z-index: 500;
+    	background-color: rgba(0, 0, 0, 0.0);
+}
+
+a.gaugeIconTitle {
+        text-align: center;
+        color: #D5D5D5;
+        text-decoration: bold;
+        text-shadow: 0 0 3px black;
+}

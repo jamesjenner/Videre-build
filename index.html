@@ -1,0 +1,2811 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset='UTF-8' />
+    <!-- need to invesitgate the use of the viewport option, it doesn't appear to be working, see
+         http://developer.android.com/guide/webapps/targeting.html
+         http://developer.android.com/guide/webapps/best-practices.html
+         
+    <meta name='viewport' content='width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0' />
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimum-scale=1.0, maximum-scale=1.0">
+
+    <title>Videre</title>
+    
+    <link rel="stylesheet" type="text/css" href="assets/css/leaflet.css" />
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <link rel="stylesheet" type="text/css" href="assets/css/radialmenu.css" />
+    <link rel="stylesheet" type="text/css" href="assets/css/dropdown.css" />
+    <link rel="stylesheet" type="text/css" href="assets/css/numberedMarker.css" />
+    <script type='text/javascript' src='assets/js/jquery-1.8.0.min.js'></script>
+    <script type='text/javascript' src='assets/js/jquery-ui-1.8.23.custom.min.js'></script>
+    <script src="assets/js/jquery.touchSwipe.min.js"  type="text/javascript"></script>
+    <script src="assets/js/swipe.js" type="text/javascript"></script>
+    <script src="assets/js/iscroll.js" type="text/javascript"></script>
+    <script src="assets/js/gauge.js" type="text/javascript"></script>
+    <script src="assets/js/server.js" type="text/javascript"></script>
+    <script src="assets/js/contentmanager.js" type="text/javascript"></script>
+    <script src="assets/js/leaflet-src.js" type="text/javascript"></script>
+    <script src="assets/js/sylvester.js" type="text/javascript"></script>
+    <script src="assets/js/transform.js" type="text/javascript"></script>
+    <script src="assets/js/radialmenu.js" type="text/javascript"></script>
+    <script src="assets/js/dropdown.js" type="text/javascript"></script>
+    <script src="assets/js/actionBar.js" type="text/javascript"></script>
+    <script src="assets/js/modalBar.js" type="text/javascript"></script>
+    <script src="assets/js/Vector2.js" type="text/javascript"></script>
+    <script src="assets/js/touchControls.js" type="text/javascript"></script>
+    <script src="assets/js/numberedMarker.js" type="text/javascript"></script>
+    <script src="assets/js/navigation.js" type="text/javascript"></script>
+    <script src="assets/js/mapPath.js" type="text/javascript"></script>
+    <script src="assets/js/mapLayer.js" type="text/javascript"></script>
+
+    <!--
+    note that the common libs use exports for compatibility with node.js,
+    however this causes a conflict with leaflet which tests for exports to
+    determine if L should be declared globally or within a local scope.
+    TODO: determine if using L globally is best or should we define exports?
+    TODO: confirm that the definition of exports in the virst videre-common lib doesn't impact the others.
+    -->
+    
+    <script src="videre-common/js/vehicle.js" type="text/javascript"></script>
+    <script src="videre-common/js/telemetry.js" type="text/javascript"></script>
+    <script src="videre-common/js/attitude.js" type="text/javascript"></script>
+    <script src="videre-common/js/position.js" type="text/javascript"></script>
+    <script src="videre-common/js/path.js" type="text/javascript"></script>
+    <script src="videre-common/js/point.js" type="text/javascript"></script>
+    <script src="videre-common/js/message.js" type="text/javascript"></script>
+    <script src="videre-common/js/drone.js" type="text/javascript"></script>
+    <script src="videre-common/js/droneCapabilities.js" type="text/javascript"></script>
+    
+    
+<script type='text/javascript'>
+
+/*
+ * Videre UI library v0.1 alpha
+ * Copyright (c) 2012 James G Jenner
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see http://www.gnu.org/licenses/
+ */
+
+/** iScroll logic  */
+/* don't need to access the scroll bar for side panes  
+var verticalScrollLeftSidebar;
+*/
+
+var verticalScrollRightSidebar;
+
+var currentActionBar = null;
+
+// var horizontalScroll = new Array();
+function loaded() {
+  verticalScrollRightSidebar = new iScroll(RIGHT_SIDEBAR_ID, {
+    hScroll: false,
+    vScroll: true,
+    momentum: false,
+    hScrollbar: false,
+    zIndex: 0
+  });
+
+  new iScroll(LEFT_SIDEBAR_ID, {
+    hScroll: false,
+    vScroll: true,
+    momentum: false,
+    hScrollbar: false,
+    zIndex: 0
+  });
+}
+
+document.addEventListener('touchmove', function (e) { e.preventDefault(); }, false);
+
+/* * * * * * * *
+ *
+ * Use this for high compatibility (iDevice + Android)
+ *
+ */
+document.addEventListener('DOMContentLoaded', function () { setTimeout(loaded, 200); }, false);
+/*
+ * * * * * * * */
+
+
+/* * * * * * * *
+ *
+ * Use this for iDevice only
+ *
+ */
+//document.addEventListener('DOMContentLoaded', loaded, false);
+/*
+ * * * * * * * */
+
+
+/* * * * * * * *
+ *
+ * Use this if nothing else works
+ *
+ */
+//window.addEventListener('load', setTimeout(function () { loaded(); }, 200), false);
+/*
+ * * * * * * * */
+
+/** end iScroll logic */
+ 
+/* 
+ * this detects touch events and changes them to mousedown, mousemove and mouseup 
+ * this is to support dnd
+ * 
+ * ideally, the approach would be to use a hold touch to activate drag mode, and 
+ * then possibly an action to confirm and another to cancel the action
+ *
+ * the problem with html5 dnd is that there is no clear way to cancel or to manage
+ * what triggers the event. It could be better to perform drag and drop manually, 
+ * instead of using the html5 approach.
+ *
+ * Another option is to enable arrangement mode, which would enable drag and drop,
+ * and then it could be disabled. Maybe an option to save arrangements, select 
+ * previously saved arrangements and so on.
+ */
+function touchHandler(event) {
+    var touches = event.changedTouches,
+        first = touches[0],
+        type = "";
+    
+    switch(event.type) {
+        case "touchstart": type = "mousedown"; break;
+        case "touchmove":  type="mousemove"; break;        
+        case "touchend":   type="mouseup"; break;
+        default: return;
+    }
+    
+    var simulatedEvent = document.createEvent("MouseEvent");
+    
+    simulatedEvent.initMouseEvent(type, true, true, window, 1,
+                              first.screenX, first.screenY,
+                              first.clientX, first.clientY, false,
+                              false, false, false, 0/*left*/, null);
+    
+    first.target.dispatchEvent(simulatedEvent);
+    event.preventDefault();
+}
+
+var ACTION_BAR = 'ActionBar';
+var MODAL_BAR = 'ModalBar';
+
+var connected = false;
+var halEnabled = false;
+
+var TELEMETY_TAB = 0;
+var REMOTE_CONTROL_TAB = 1;
+
+// var PAYLOAD_TAB_CONTROL = 'PayloadTabControl';
+var TELEMETRY_TAB_CONTROL = 'TelemetryTabControl';
+// var FLIGHTPLAN_TAB_CONTROL = 'FlightPlanTabControl';
+var REMOTECONTROL_TAB_CONTROL = 'RemoteControlTabControl';
+
+var ADD_VEHICLE_CONTROL_ID = 'addVehicleControl';
+var ADD_SERVER_CONTROL_ID = 'addServerControl';
+
+var PAYLOAD_SUB_ID = 'PayloadContentArea';
+var TELEMETRY_SUB_ID = 'TelemetryContentArea';
+var FLIGHTPLAN_SUB_ID = 'FlightPlanContentArea';
+var REMOTECONTROL_SUB_ID = 'RemoteControlContentArea';
+var REMOTECONTROL_CANVAS_ID = 'RemoteControlCanvas';
+
+var VEHICLE_GROUP = 'vehicleGroup';
+var VEHICLE_CONTROL = 'vehicleControl';
+var VEHICLE_CONTENT = 'vehicle';
+
+var SERVER_GROUP = 'serverGroup';
+var SERVER_CONTROL = 'serverControl';
+var SERVER_CONTENT = 'server';
+
+var ADD_ICON = 'assets/icons/drawable-xhdpi-v11/ic_action_create.png';
+
+var SERVER_ICON = 'assets/icons/drawable-xhdpi-v11/ic_action_server.png';
+
+var AIRPLANE_ICON = 'assets/icons/drawable-xhdpi-v11/ic_action_airplane.png';
+var SURFACE_ICON = 'assets/icons/drawable-xhdpi-v11/ic_action_surface.png';
+var SUBMERSIBLE_ICON = 'assets/icons/drawable-xhdpi-v11/ic_action_submersible.png';
+
+var AIRPLANE_MAP_ICON = 'assets/icons/airplane.png';
+
+var SUBMERSIBLE_ICON = 'assets/icons/drawable-xhdpi-v11/ic_action_submersible.png';
+
+var SECURE_ICON = 'assets/icons/drawable-xhdpi-v11/ic_action_secure.png';
+var UNSECURE_ICON = 'assets/icons/drawable-xhdpi-v11/ic_action_unsecure.png';
+
+var HOME_CONTROL_ID = 'homeControl';
+var HOME_CONTENT_ID = 'home';
+
+var LEFT_SIDEBAR_ID = 'leftSidebar';
+var RIGHT_SIDEBAR_ID = 'rightSidebar';
+// var RIGHT_SIDEBAR_CONTAINER_ID = 'rightSidebarContainer';
+var RIGHT_SIDEBAR_CONTAINER_ID = 'rightScroller';
+
+var PAYLOAD_CONTROL_ID = 'payloadControl';
+var PAYLOAD_CONTENT_ID = 'payloadContent';
+
+var NAVIGATION_CONTROL_ID = 'navigationControl';
+var NAVIGATION_CONTENT_ID = 'navigationContent';
+
+// the currently selected control on the left side pane
+var currentFocusControlId = '';
+// the currently selected content based on the left side pane selection
+var currentFocusContentId = '';
+// the tabs for each vehicle
+var vehicleTabSelection = new Array();
+// the content slider for each vehicle tab
+var vehicleContentSlider = new Array();
+
+var contentManager = new ContentManager();
+
+$(document).ready(function() {
+
+  configureApplication();
+  // jgj todo: is this still required?
+  /*
+  $('#toolbarAccess').swipe({
+    swipeStatus:function(event, phase, direction, distance, fingerCount) {
+      toolbarDisplay(direction, phase, distance);
+    },
+    trigerOnTouchEnd:false,
+    threshold:null,
+    fingers:'all'
+  });
+  */
+
+  // TODO: not really happy about this, need to find a better approach, possibly add when on form and remove when leaving form
+  // add a listener to clicks on the document, if it happens then close all drop downs
+  $(document).on('click', function() {
+    // all dropdowns
+    $('.dropdownwrapper').removeClass('active');
+  });
+
+});
+
+// setup the options in the left sidebar
+function configureApplication() {
+  // add home content
+  // TODO: create content for the home page
+  addContentUI(HOME_CONTENT_ID, 'Home', 'It is a cliche that most cliches are true, but then like most cliches, that cliche is untrue - Stephen Fry');
+  // add home listener
+  addListenerToSidebarControl(LEFT_SIDEBAR_ID, HOME_CONTROL_ID, HOME_CONTENT_ID);
+
+  // add payload control listener
+  addListenerToSidebarControl(LEFT_SIDEBAR_ID, PAYLOAD_CONTROL_ID, PAYLOAD_CONTENT_ID, function() {
+    // add the ui content for the payload
+    // TODO: make this content that is only added as required
+    addPayloadContentUI(PAYLOAD_CONTENT_ID);
+  });
+  
+  // add navigation content listener
+  addListenerToSidebarControl(LEFT_SIDEBAR_ID, NAVIGATION_CONTROL_ID, NAVIGATION_CONTENT_ID, function() {
+    // add the ui content for the navigation
+    // TODO: make this content that is only added as required
+    addNavigationContentUI(NAVIGATION_CONTENT_ID);
+  });
+
+  // add the add vehicle to the sidebar
+  appendControlToSidebar(VEHICLE_GROUP, ADD_VEHICLE_CONTROL_ID, ADD_ICON, 'Add Vehicle');
+  // add listeners to the controls that adds a vehicle
+  addListenerToSidebarControl(LEFT_SIDEBAR_ID, ADD_VEHICLE_CONTROL_ID, 'addVehicle');
+  
+  // add the add server to the sidebar
+  appendControlToSidebar(SERVER_GROUP, 'addServerControl', ADD_ICON, 'Add Server');
+  // add listeners to the controls that adds a server
+  addListenerToSidebarControl(LEFT_SIDEBAR_ID, 'addServerControl', 'addServer');
+  
+  // add the preferences content
+  // TODO: make this content that is only added as required
+  addContentUI('preferences', 'Preferences', "Here be dragons");
+  // add listeners to the control for the preferences
+  addListenerToSidebarControl(LEFT_SIDEBAR_ID, 'preferencesControl', 'preferences');
+  
+  // set the initial focus to the home control
+  setFocus(HOME_CONTROL_ID, HOME_CONTENT_ID);
+
+  // load previously persisted data
+  contentManager.loadData();
+  
+  // iterate through the vehicles and add them to the sidebar
+  for(var vehicle in contentManager.vehicles) {
+    addVehicleToSidebar(contentManager.vehicles[vehicle]);
+  }
+
+  // iterate through the servers and add them to the sidebar as well as add listeners for events
+  for(var server in contentManager.servers) {
+    // add the server to the sidebar
+    addServerToSidebar(contentManager.servers[server]);
+    
+    // setup connection/disconnection/message listeners
+    contentManager.servers[server].connectionListener = serverConnected;
+    contentManager.servers[server].disconnectionListener = serverDisconnected;
+    contentManager.servers[server].errorListener = serverError;
+    
+    contentManager.servers[server].rcvdAddVehicle = createVehicleFromServer;
+    contentManager.servers[server].rcvdDeleteVehicle = removeVehicleFromSidebar;
+    // contentManager.servers[server].rcvdUpdateVehicle = 
+    contentManager.servers[server].rcvdTelemetry = receivedTelemetry;
+    contentManager.servers[server].rcvdNavPathUpdated = receivedUpdateNavPath;
+    // contentManager.servers[server].rcvdPayload = 
+  }
+
+  // add the form for creating vehicles
+  // TODO: make this content that is only added as required
+  addVehicleCreateFormUI('addVehicle', 'Add Vehicle');
+  
+  // add the form for creating servers
+  // TODO: make this content that is only added as required
+  addServerCreateFormUI('addServer', 'Add Server');
+}
+
+var LEFT_SIDEBAR_CONTROL_TEXT = 'leftSidebarControlText';
+
+function addHeadingToSidebar(containerId, title) {
+/*  
+        <div id="vehicleGroup" class="sidebarGroup">
+          <div class="sidebarGroupHeading">
+            <div id="vehicleGroupTitle" class="sidebarGroupTitle">Vehicles</div>
+          </div>
+        </div>
+*/  
+  
+  $('#' + containerId).append(
+        '<div class="sidebarGroupHeading">' +
+        '</div>' +
+        '<div id="testGroup" class="sidebarGroup">' +
+        '  <div class="sidebarGroupHeading">' +
+        '    <div id="testGroupTitle" class="sidebarGroupTitle">' + title + '</div>' +
+        '  </div>' +
+        '</div>'
+  );
+}
+
+function addToggleToSidebar() {
+  
+}
+
+function addTextToSidebar() {
+  
+}
+
+function addSelectorToSidebar(sideBarContainerId, name, title, description, icon, enabled, clickFunction, radioToggle, radioGroup) {
+
+  radioToggle = radioToggle === undefined ? false : radioToggle;
+  radioGroup = radioGroup === undefined ? []: radioGroup;
+
+  $('#' + sideBarContainerId).append(
+    '<div id="' + 'selector' + name + '" class="controlBar">' +
+    '  <div id="' + 'selector' + name + 'ControlArea" class="controlIconArea">' +
+    '    <img class="controlIcon" src="' + icon + '" />' +
+    '  </div>' +
+    '  <div class="controlText">' +
+    '    <div class="controlName">' +
+           title + 
+    '    </div>' +
+    '    <div class="controlSubText">' +
+           description + 
+    '    </div>' +
+    '  </div>' +
+    '</div>');
+
+  // if the target of the selector is enabled then activate
+  
+  if(enabled) {
+    $('#selector' + name + 'ControlArea').toggleClass('controlIconAreaSelected');
+  }
+  
+  $('#selector' + name).click(function() {
+    // call the function for activation of the selector
+    clickFunction();
+    
+    if(radioToggle) {
+      for(var i = 0, l = radioGroup.length; i < l; i++) {
+        
+        $('#selector' + radioGroup[i] + 'ControlArea').removeClass('controlIconAreaSelected');
+      }
+
+      // toggle the control
+      $('#selector' + name + 'ControlArea').addClass('controlIconAreaSelected');
+    } else {
+      // toggle the control
+      $('#selector' + name + 'ControlArea').toggleClass('controlIconAreaSelected');
+    }
+  });
+}
+          
+// TODO: change addGaugeControlToSidebar to utilise the addSelectorToSidebar logic, as it's a more generic approach, while gauge is tailored or gauges.
+function addGaugeControlToSidebar(containerId, contentManager, gaugeSetting) {
+
+/*    
+    this.id = id;
+    this.gauge = gauge;
+    
+    this.options = options || {};
+
+    this.currentValue = this.options.currentValue || 0;
+    this.x = this.options.x || 0;
+    this.y = this.options.y || 0;
+    this.visible = this.options.visible || false;
+  */
+
+  $('#' + containerId).append(
+    '<div id="' + 'toggle' + gaugeSetting.gauge.name + '" class="controlBar">' +
+    '  <div id="' + 'toggle' + gaugeSetting.gauge.name + 'ControlArea" class="controlIconArea">' +
+    '    <img class="controlIcon" src="' + gaugeSetting.gauge.icon + '" />' +
+    '  </div>' +
+    '  <div class="controlText">' +
+    '    <div class="controlName">' +
+           gaugeSetting.gauge.title + 
+    '    </div>' +
+    '    <div class="controlSubText">' +
+           gaugeSetting.gauge.description + 
+    '    </div>' +
+    '  </div>' +
+    '</div>');
+
+  // if the gauge is visible then enable the control  
+  if(gaugeSetting.visible) {
+    $('#toggle'  + gaugeSetting.gauge.name + 'ControlArea').toggleClass('controlIconAreaSelected');
+  }
+  
+  $('#toggle' + gaugeSetting.gauge.name).click(function() {
+    if(gaugeSetting.visible) {
+      gaugeSetting.visible = !hideGauge(gaugeSetting.gaugeId);
+    } else {
+      gaugeSetting.visible = showGauge(gaugeSetting, contentManager.getFocusedTabId());
+    }
+    
+    // toggle the control
+    $('#toggle'  + gaugeSetting.gauge.name + 'ControlArea').toggleClass('controlIconAreaSelected');
+    
+    return false;
+  });
+}
+ 
+function loadSidebar(targetId, containerId) {
+  // check if contents of side bar is same as previous
+  
+  // it's different so destroy the contents of side bar
+  $('#' + containerId).empty();
+  
+  // create the correct contents
+
+  /** TODO: tidy up use of setFocusedTab, setFocusedTabNbr and setFocusedTabId */
+  
+  // iterate through the settings for the current pane/tab
+  var settings = contentManager.getContentSettings(targetId);
+  if(settings != undefined) {
+    
+    var len = settings.length;
+    for(var i=0; i < len; i++) {
+      if(i in settings) {
+        if(settings[i] instanceof HeadingSetting) {
+          console.log("Settings: Adding heading");
+          addHeadingToSidebar(containerId, settings[i].title);
+        } else if(settings[i] instanceof ToggleSetting) {
+          console.log("Settings: Adding toggle");
+        } else if(settings[i] instanceof TextSetting) {
+          console.log("Settings: Adding text");
+        } else if(settings[i] instanceof RangeSetting) {
+          console.log("Settings: Adding range");
+        } else if(settings[i] instanceof GaugeSetting) {
+          console.log("Settings: Adding gauge");
+          addGaugeControlToSidebar(containerId, contentManager, settings[i]);
+        }
+      }
+    }
+  }
+  
+  // setup the values of the properties for the sidebar
+  
+  // refresh the scroller (so it knows about the new content and will behave appropriately)
+}
+
+function resetForm(formId) {
+  // todo: needs to support the custom css for toggles
+  
+  // todo: needs to support the drop downs, somehow need to describe a default on the form and have this reset to the defaults
+  
+  var form = $(formId);
+  
+  form.find('input:text, input:password, input:file, select, textarea').val('');
+  form.find('input[type="number"]').val('');
+  form.find('input:radio, input:checkbox')
+    .removeAttr('checked').removeAttr('selected');
+
+  // TODO: do we need this?
+  // form.find(".switch.on").toggleClass('on');
+}
+
+function createServer() {
+  // get form contents
+  
+  server = new Server({
+    'name':$('#serverCreateName').val(),
+    'ipAddress':$('#serverCreateIPAddress').val(),
+    'port':$('#serverCreatePort').val(),
+    'securePort':$('#serverCreateSecurePort').val(),
+    'protocol':$('#serverCreateProtocol').val(),
+    'userId':$('#serverCreateUserId').val(),
+    'password':$('#serverCreatePassword').val(),
+    'commsSecurity':$('#serverCreateCommsSecurity').val(),
+    'rememberPassword':$('#serverCreateRememberPassword').is(':checked'),    
+    'secureOnly':$('#serverCreateSecureOnly').is(':checked'),    
+    'log':$('#serverCreateLoggingEnabled').is(':checked'),    
+    connectionListener: serverConnected,
+    disconnectionListener: serverDisconnected,
+    rcvdAddVehicle: createVehicleFromServer,
+    rcvdDeleteVehicle: removeVehicleFromSidebar,
+    // rcvdUpdateVehicle: ,
+    rcvdTelemetry: receivedTelemetry,
+    rcvdNavPathUpdated: receivedUpdateNavPath,
+    // rcvdPayload: ,
+    errorListener: serverError
+  });
+  
+  // add the vehicle to the content manager
+  contentManager.addServer(server, true);
+  
+  // persist the information
+  
+  // load the ui for the server
+  addServerToSidebar(server);
+
+  // TODO: add a message to state that the action has been performed
+  
+  // reset the ui  
+  resetForm('#createServerForm');
+}
+
+/**
+ * unloadServersUIs(server)
+ *
+ * unloads the ui elements that are used for a server
+ */
+function removeServerFromSidebar(server) {
+  var serverControlId = SERVER_CONTROL + server.position;
+  var serverContentId = SERVER_CONTENT + server.position;
+
+  // remove the control for accessing the server
+  $('#' + serverControlId).remove();
+}
+
+/**
+ * loadServerUI()
+ *
+ * loads the ui elements to support the passed server
+ * 
+ */
+function addServerToSidebar(server) {
+  // adding the server to the content manager sets it's position
+  var serverNumber = server.position;
+  var serverControlId = SERVER_CONTROL + serverNumber;
+  var serverContentId = SERVER_CONTENT + serverNumber;
+
+  // add the control that lets the user select the server details UI before the add server control on the side bar
+  addControlToSidebarBeforeId(ADD_SERVER_CONTROL_ID, serverControlId, SERVER_ICON, server.name);
+  
+  // add the listener for the ui to activate the side bar 
+  addListenerToSidebarControl(LEFT_SIDEBAR_ID, serverControlId, serverContentId, function() {
+    // add the ui content for the server
+    addServerContentUI(serverContentId, server);
+  });
+}
+
+function addServerCreateFormUI(id, title) {  
+  $('#mainApplication').append(
+    '<div id="' + id + '" class="applicationContents">' +
+    '  <div id="' + id + 'Form" class="formContainer">' +
+    '    <div class="formContents">' +
+    '      <div class="formContents">' +
+    '       <form id="createServerForm">' +
+    '         <ul>' + 
+    '           <li>' + 
+    '             <label for="serverCreateName">Name</label>' +
+    '             <input type="text" name="name" id="serverCreateName" placeholder="Name" required><br>' +
+    '           </li>' + 
+    '           <li class="breakTop">' + 
+    '             <label for="serverCreateIPAddress">IP Address</label>' +
+    //'             <input type="text" name="address" id="serverCreateIPAddress" placeholder="IP Address" required pattern="\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}"><br>' +
+    // TODO: figure out the ip address pattern for front end validation
+    '             <input type="text" name="address" id="serverCreateIPAddress" placeholder="IP Address" required ><br>' +
+    '           </li>' + 
+    '           <li>' + 
+    '             <label for="serverCreatePort">Port</label>' +
+    '             <input type="number" min="1" max="99999" name="port" id="serverCreatePort" placeholder="Port"><br>' +
+    '           </li>' + 
+    '           <li>' + 
+    '             <label for="serverCreateSecurePort">Secure Port</label>' +
+    '             <input type="number" min="1" max="99999" name="securePort" id="serverCreateSecurePort" placeholder="Secure Port"><br>' +
+    '           </li>' + 
+    '           <li>' + 
+    '             <label for="serverCreateProtocol">Protocol</label>' +
+    '             <input type="text" name="protocol" id="serverCreateProtocol" placeholder="Protocol"><br>' +
+    '           </li>' +
+    '           <li class="breakTop">' + 
+    '             <label for="serverCreateUserId">User Id</label>' +
+    '             <input type="text" name="userId" id="serverCreateUserId" placeholder="User Id" required><br>' +
+    '           </li>' + 
+    '           <li>' + 
+    '             <label for="serverCreatePassword">Password</label>' +
+    '             <input type="text" name="password" id="serverCreatePassword" placeholder="Password" required><br>' +
+    '           </li>' + 
+    '           <li>' + 
+    '             <span class="checkboxLabel">Remember password</span> ' +
+    '             <div class="switch"><span class="thumb"></span><input type="checkbox" name="RememberPassword" id="serverCreateRememberPassword"></div>' +
+    '           </li>' + 
+    '           <li>' +
+    '            <label for="serverCreateCommsSecurity">Communications security</label>' +
+    '            <div id="serverCreateCommsSecurityWrapper" class="dropdownwrapper">' +
+    '             <input type="popup" name="commsSecurity" id="serverCreateCommsSecurity" placeholder="CommsSecurity" readonly="true">' +
+    '             <span class="triangle"></span>' +
+    '             <ul class="dropdown">' +
+    '              <li><a href="#"><div class="dropdownIcon"></div><span class="dropdownText">Secure and Unsecure</span></a></li>' +
+    '              <li><a href="#"><img class="dropdownIcon" src="' + SECURE_ICON + '" /><span class="dropdownText">Secure Only</span></a></li>' +
+    '              <li><a href="#"><img class="dropdownIcon" src="' + UNSECURE_ICON + '" /><span class="dropdownText">Unsecure Only</span></a></li>' +
+    '             </ul>' +
+    '            </div>' +
+    
+    '           </li>' + 
+    '           <li class="breakTop">' + 
+    '             <span class="checkboxLabel">Communication events are logged</span> ' +
+    '             <div class="switch"><span class="thumb"></span><input type="checkbox" name="Logging" id="serverCreateLoggingEnabled"></div>' +
+    '           </li>' +
+    '       </form>' +
+    '      </div>' +
+    '    </div>' +
+    '  </div>' +
+    '</div>');
+
+  // setup and initialise the action bar
+  new ActionBar({
+    targetId: id,
+    id: id + ACTION_BAR,
+    title: title,
+    settingsAction: false,
+    save: true,
+    saveFunction: createServer
+  }).initialise();
+    
+  // add the toggle switch to switch classed checkboxes  
+  $('#createServerForm .switch').on("click", toggleSwitch);
+
+  // add the drop down logic for the drop downs  
+  new DropDown( $('#serverCreateCommsSecurityWrapper') );
+}
+
+function createVehicleFromServer(server, vehicle) {
+  // add the vehicle to the content manager
+  if(contentManager.addRemoteVehicle(server, vehicle, true)) {
+    // load the ui for the vehicle
+    addVehicleToSidebar(vehicle, server);
+  }
+}
+
+var VEHICLE_LOCAL = 'Local';
+
+function createVehicle() {
+  // create a new vehicle from the form
+  vehicle = new Vehicle({
+    'name':$('#vehicleCreateName').val(),
+    'type':$('#vehicleCreateVehicleType').val(),
+    'payloadEnabled':$('#vehicleCreatePayload').is(':checked'),
+    'navigationEnabled':$('#vehicleCreateNavigationEnabled').is(':checked'),
+    'remoteControlEnabled':$('#vehicleCreateRemoteControlEnabled').is(':checked')});
+  
+  var remoteServerName = $('#vehicleCreateRemoteServer').val();
+  var remoteServer = null;
+  var duplicate = false;
+  var error = false;
+  
+  if(remoteServerName == VEHICLE_LOCAL) {
+    // it's a local vehicle
+    
+    // check that the vehicle doesn't exist first
+    for(i = 0, l = contentManager.vehicles.length; i < l; i++) {
+      if(contentManager.vehicles[i].name === vehicle.name) {
+        duplicate = true;
+        break;
+      }
+    }
+    
+    // TODO: add error handling to display 'vehicle exists' 
+    if(duplicate) {
+      error = true;
+    } else {
+      // add the vehicle to the content manager
+      contentManager.addVehicle(vehicle, true);
+      
+      // load the ui for the vehicle
+      addVehicleToSidebar(vehicle);
+    }
+  } else {
+    // it's a server vehicle, find the server selected
+    for(i = 0, l = contentManager.servers.length; i < l; i++) {
+      if(contentManager.servers[i].name == remoteServerName) {
+        remoteServer = contentManager.servers[i];
+        break;
+      }
+    }
+    
+    // send a messsage to add it
+    if(remoteServer) {
+      // check that the vehicle doesn't exist
+      for(i = 0, l = contentManager.remoteVehicles[remoteServer.name].length; i < l; i++) {
+        if(contentManager.remoteVehicles[remoteServer.name][i].name === vehicle.name) {
+          duplicate = true;
+          break;
+        }
+      }
+      
+      if(remoteServer.isConnected && !duplicate) {
+        remoteServer.sendMessage(Message.ADD_VEHICLE, vehicle);
+      } else {
+        error = true;
+      }
+    } else {
+      error = true;
+    }
+    // TODO: generate error if the selected server is not connected
+    
+  }
+  
+  // TODO: add a message to state that the action has been performed
+  
+  // reset the form
+  if(!error) {
+    resetForm('#createVehicleForm');
+  }
+  
+  return false;
+}
+
+/**
+ * unloadVehiclesUIs(vehicle)
+ *
+ * unloads the ui elements that are used for a vehicle
+ */
+function removeVehicleFromSidebar(vehicle, server) {
+  var vehicleControlId = VEHICLE_CONTROL + vehicle.position;
+
+  if(server) {
+    vehicleControlId += 's' + server.position;
+  }
+  
+  if(contentManager.focusedPaneId === VEHICLE_CONTENT) {
+    // currently focused on content so change focus, this indirectly removes the content as well
+    setFocus(HOME_CONTROL_ID, HOME_CONTENT_ID);
+  }
+  
+  // remove the control for accessing the vehicle
+  $('#' + vehicleControlId).remove();
+}
+
+function receivedUpdateNavPath(message, server) {
+  // update the details of the specified vehicle for the remote server
+  var vehicle = null;
+  // if we're on the nav map then update the nav map as well
+  for(var i = 0, l = contentManager.remoteVehicles[server.name].length; i < l; i++) {
+    if(contentManager.remoteVehicles[server.name].id == message.id) {
+      vehicle = contentManager.remoteVehicles[server.name];
+      break;
+    }
+  }
+  
+  if(!vehicle) {
+    return;
+  }
+  
+  // update the path
+  vehicle.navigationPath = message.navPath;
+  
+  if(vehicle.onMap && message.onMap) {
+    // update the path on the nav map
+  }
+  
+  if(vehicle.onMap && !message.onMap) {
+    // remove the vehicle from the map
+    
+  }
+  
+  if(!vehicle.onMap && message.onMap) {
+    // add the vehicle to the map
+    
+  }
+  
+  // update the flag
+  vehicle.onMap = message.onMap;
+}
+
+/*
+ * getVehicleIcon get the icon for the specified vehicle type
+ *
+ * vehicle  the vehicle of which the icon is to be determined for
+ *
+ * returns the appropriate icon, defaulting to the airplane icon if the type cannot be determined
+ */
+function getVehicleIcon(vehicle) {
+  var icon = AIRPLANE_ICON;
+  
+  switch(vehicle.type) {
+    case Vehicle.TYPE_AIR:
+      icon = AIRPLANE_ICON;
+      break;
+    case Vehicle.TYPE_SURFACE:
+      icon = SURFACE_ICON;
+      break;
+    case Vehicle.TYPE_SUBMERSIBLE:
+      icon = SUBMERSIBLE_ICON;
+      break;
+  }
+  
+  return icon;
+}
+
+/**
+ * loadVehicleUI()
+ *
+ * loads the ui elements to support the passed vehicle
+ * 
+ */
+function addVehicleToSidebar(vehicle, server) {
+  // determine the icon for the vehicle
+  var icon = getVehicleIcon(vehicle);
+  
+  // adding the vehicle to the content manager sets it's position
+  var vehicleNumber = vehicle.position;
+  var vehicleControlId = VEHICLE_CONTROL + vehicleNumber;
+
+  if(server) {
+    vehicleControlId += 's' + server.position;
+  }
+
+  // add the control that lets the user select the vehicle content UI on the side bar
+  addControlToSidebarBeforeId(ADD_VEHICLE_CONTROL_ID, vehicleControlId, icon, vehicle.name);
+  
+  // add the listener for the ui to activate the side bar 
+  addListenerToSidebarControl(LEFT_SIDEBAR_ID, vehicleControlId, VEHICLE_CONTENT, function() {
+    // add the ui content for the vehicle
+    addVehicleContentUI(VEHICLE_CONTENT, vehicle, server);
+  });
+  
+  // TODO: we have no UI to maintain the settings for the vehicle, need to add an option to provide this
+  // add the ui to maintain the information for the vehicle
+}
+
+function addVehicleCreateFormUI(id, title) {
+  var remoteServerList = '';
+  
+  // TODO: this is called at the start, so doesn't show servers added after initially loaded, change this ui to only add when required
+  
+  // build list for the remote server drop down
+  for(var i = 0, l = contentManager.servers.length; i < l; i++) {
+    // Add all servers, otherwise the dynamic issues of disconnecting and connecting servers is too problematic for the user to understand
+    remoteServerList += '              <li><a href="#"><img class="dropdownIcon" src="' + SERVER_ICON + '" /><span class="dropdownText">' +  contentManager.servers[i].name + '</span></a></li>'
+  }
+  
+  $('#mainApplication').append(
+    '<div id="' + id + '" class="applicationContents">' +
+    '  <div id="' + id + 'Form" class="formContainer">' +
+    '    <div class="formContents">' +
+    '      <div class="formContents">' +
+    '       <form id="createVehicleForm">' +
+    '         <ul>' + 
+    '           <li>' + 
+    '             <label for="vehicleCreateName">Name</label>' +
+    '             <input type="text" name="name" id="vehicleCreateName" placeholder="Name" required><br>' +
+    '           </li>' +
+    
+    '           <li class="breakTop">' +
+    '            <label for="vehicleCreateVehicleType">Type of vehicle</label>' +
+    '            <div id="vehicleCreateVehicleTypeWrapper" class="dropdownwrapper">' +
+    '             <input type="popup" name="remoteServer" id="vehicleCreateVehicleType" placeholder="VehicleType" readonly="true">' +
+    '             <span class="triangle"></span>' +
+    '             <ul class="dropdown">' +
+    '              <li><a href="#">' + '<img class="dropdownIcon" src="' + AIRPLANE_ICON + '" />' + '<span class="dropdownText">Air</span></a></li>' +
+    '              <li><a href="#">' + '<img class="dropdownIcon" src="' + SURFACE_ICON + '" />' + '<span class="dropdownText">Surface</span></a></li>' +
+    '              <li><a href="#">' + '<img class="dropdownIcon" src="' + SUBMERSIBLE_ICON + '" />' + '<span class="dropdownText">Submersible</span></a></li>' +
+    
+    '             </ul>' +
+    '            </div>' +
+    '           </li>' +
+
+    '           <li class="breakTop">' +
+    '            <label for="vehicleCreateRemoteServer">Remote Server</label>' +
+    '            <div id="vehicleCreateRemoteServerWrapper" class="dropdownwrapper">' +
+    '             <input type="popup" name="remoteServer" id="vehicleCreateRemoteServer" placeholder="RemoteServer" readonly="true">' +
+    '             <span class="triangle"></span>' +
+    '             <ul class="dropdown">' +
+    '              <li><a href="#"><div class="dropdownIcon"></div><span class="dropdownText">Local</span></a></li>' + remoteServerList +
+    '             </ul>' +
+    '            </div>' +
+    '           </li>' +
+    
+    '           <li class="breakTop">' +
+    '             <span class="checkboxLabel">Vehicle contains payload</span> ' +
+    '             <div class="switch"><span class="thumb"></span><input type="checkbox" name="payloadEnabled" id="vehicleCreatePayload"></div>' +
+    '           </li>' +
+    '           <li>' +
+    '             <span class="checkboxLabel">Vehicle supports navigation</span> ' +
+    '             <div class="switch"><span class="thumb"></span><input type="checkbox" name="navigationEnabled" id="vehicleCreateNavigationEnabled"></div>' +
+    '           </li>' + 
+    '           <li>' +
+    '             <span class="checkboxLabel">Vehicle can be controlled remotely</span> ' +
+    '             <div class="switch"><span class="thumb"></span><input type="checkbox" name="remoteControlEnabled" id="vehicleCreateRemoteControlEnabled"></div>' +
+    '           </li>' + 
+    '         </ul>' + 
+    '       </form>' +
+    '      </div>' +
+    '    </div>' +
+    '  </div>' +
+    '</div>');
+
+  // setup and initialise the action bar
+  new ActionBar({
+    targetId: id,
+    id: id + ACTION_BAR,
+    title: title,
+    settingsAction: false,
+    save: true,
+    saveFunction: createVehicle
+  }).initialise();
+    
+  // add the toggle switch to switch classed checkboxes  
+  $('#createVehicleForm .switch').on("click", toggleSwitch);
+  
+  // add the drop down logic for the drop downs  
+  new DropDown( $('#vehicleCreateRemoteServerWrapper') );
+  new DropDown( $('#vehicleCreateVehicleTypeWrapper') );
+}
+
+/**
+ * toggleSwitch() Toggles a checkbox hidden by css.
+ *
+ * This is dependant on the classes switch, on and off.
+ */
+function toggleSwitch() {
+    if (this.className === "switch on") {
+      this.className = 'switch off';
+    } else {
+      this.className = ("switch on");
+    }
+    checkbox = this.lastElementChild;
+    checkbox.checked = !checkbox.checked;
+}
+
+function addContentUI(id, title, subTitle) {
+  $('#mainApplication').append(
+    '<div id="' + id + '" class="applicationContents">' +
+    '  <div id="' + id + 'Message" class="content">' +
+    '    <div class="message">' +
+    '      <div class="messageContents">' +
+    '        <span>' + title + '</span><br/>' +
+    '        <span>' + subTitle + '</span>' +
+    '      </div>' +
+    '    </div>' +
+    '  </div>' +
+    '</div>');
+
+  // setup the action bar  
+  new ActionBar({
+    targetId: id,
+    id: id + ACTION_BAR,
+    title: title,
+  }).initialise();
+}
+
+function addServerContentUI(id, server) {
+
+  $('#mainApplication').append(
+    '<div id="' + id + '" class="applicationContents">' +
+    '  <div id="' + id + 'Form" class="formContainer">' +
+    '    <div class="formContents">' +
+    '      <div class="formContents">' +
+    '       <form id="updateServerForm">' +
+    '         <ul>' + 
+    '           <li>' +
+    '               <label>Status</label>' +
+    '               <span>' + (server.isConnected ? 'Connected' : 'Disconnected') + '</span>' +
+    '           </li>' + 
+    '           <li>' +
+    '               <label>Available vehicles</label>' +
+    '               <span>' + server.nbrVehicles + '</span>' +
+    '           </li>' + 
+    '           <li class="breakTop">' + 
+    '             <label for="serverUpdateName">Name</label>' +
+    '             <input type="text" name="name" id="serverUpdateName" placeholder="Name" required><br>' +
+    '           </li>' + 
+    '           <li class="breakTop">' + 
+    '             <label for="serverUpdateIPAddress">IP Address</label>' +
+    //'             <input type="text" name="address" id="serverUpdateIPAddress" placeholder="IP Address" required pattern="\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}"><br>' +
+    // TODO: figure out the ip address pattern for front end validation
+    '             <input type="text" name="address" id="serverUpdateIPAddress" placeholder="IP Address" required><br>' +
+    '           </li>' + 
+    '           <li>' + 
+    '             <label for="serverUpdatePort">Port</label>' +
+    '             <input type="number" min="1" max="99999" name="port" id="serverUpdatePort" placeholder="Port"><br>' +
+    '           </li>' + 
+    '           <li>' + 
+    '             <label for="serverUpdateSecurePort">Secure Port</label>' +
+    '             <input type="number" min="1" max="99999" name="securePort" id="serverUpdateSecurePort" placeholder="SecurePort"><br>' +
+    '           </li>' + 
+    '           <li>' + 
+    '             <label for="serverUpdateProtocol">Protocol</label>' +
+    '             <input type="text" name="protocol" id="serverUpdateProtocol" placeholder="Protocol"><br>' +
+    '           </li>' +
+    '           <li class="breakTop">' + 
+    '             <label for="serverUpdateUserId">User Id</label>' +
+    '             <input type="text" name="userId" id="serverUpdateUserId" placeholder="User Id" required><br>' +
+    '           </li>' + 
+    '           <li>' + 
+    '             <label for="serverUpdatePassword">Password</label>' +
+    '             <input type="text" name="password" id="serverUpdatePassword" placeholder="Password" required><br>' +
+    '           </li>' + 
+    '           <li>' + 
+    '             <span class="checkboxLabel">Remember password</span> ' +
+    '             <div id="serverUpdateRememberPasswordSwitch" class="switch"><span class="thumb"></span><input type="checkbox" name="RememberPassword" id="serverUpdateRememberPassword"></div>' +
+    '           </li>' + 
+    '           <li>' + 
+    '            <label for="serverUpdateCommsSecurity">Communications security</label>' +
+    '            <div id="serverUpdateCommsSecurityWrapper" class="dropdownwrapper">' +
+    '             <input type="popup" name="commsSecurity" id="serverUpdateCommsSecurity" placeholder="CommsSecurity" readonly="true">' +
+    '             <span class="triangle"></span>' +
+    '             <ul class="dropdown">' +
+    '              <li><a href="#"><div class="dropdownIcon"></div><span class="dropdownText">Secure and Unsecure</span></a></li>' +
+    '              <li><a href="#"><img class="dropdownIcon" src="' + SECURE_ICON + '" /><span class="dropdownText">Secure Only</span></a></li>' +
+    '              <li><a href="#"><img class="dropdownIcon" src="' + UNSECURE_ICON + '" /><span class="dropdownText">Unsecure Only</span></a></li>' +
+    '             </ul>' +
+    '            </div>' +
+
+    '           </li>' +
+    
+    '           <li class="breakTop">' + 
+    '             <span class="checkboxLabel">Communication events are logged</span> ' +
+    '             <div id="serverUpdateLoggingEnabledSwitch" class="switch"><span class="thumb"></span><input type="checkbox" name="Logging" id="serverUpdateLoggingEnabled"></div>' +
+    '           </li>' +
+    '       </form>' +
+    '      </div>' +
+    '    </div>' +
+    '  </div>' +
+    '</div>');
+
+  // set values
+  $('#serverUpdateName').val(server.name);
+  $('#serverUpdateIPAddress').val(server.ipAddress);
+  $('#serverUpdatePort').val(server.port);
+  $('#serverUpdateSecurePort').val(server.securePort);
+  $('#serverUpdateProtocol').val(server.protocol);
+
+  $('#serverUpdateUserId').val(server.userId),
+  $('#serverUpdatePassword').val(server.password),
+  
+  $('#serverUpdateRememberPassword').prop('checked', server.rememberPassword);
+  if(server.rememberPassword) {
+    $('#serverUpdateRememberPasswordSwitch').toggleClass('on');
+  }
+  $('#serverUpdateCommsSecurity').val(server.commsSecurity);
+  
+  $('#serverUpdateLoggingEnabled').prop('checked', server.log);
+  if(server.log) {
+    $('#serverUpdateLoggingEnabledSwitch').toggleClass('on');
+  }
+
+  // setup and initialise the action bar
+  var serverActionBar = new ActionBar({
+    targetId: id,
+    id: id + ACTION_BAR,
+    title: server.name,
+    settingsAction: false,
+    remove: true,
+    removeFunction: function() {
+        removeServer(server);
+    },
+    save: true,
+    saveFunction: function() {
+      updateServer(server);
+    },
+    disconnect: true,
+    disconnectFunction: function () { disconnectServer(server) },
+    connect: true,
+    connectFunction:  function () { connectServer(server) },
+  }).initialise();
+  
+  if(server.isConnected) {
+    serverActionBar.disableAction(ActionBar.CONNECT);
+  } else {
+    serverActionBar.disableAction(ActionBar.DISCONNECT);
+  }
+  
+  // setup listener for the server that is being updated
+
+  server.connectionListener = function(e) { 
+    serverConnected(e, serverActionBar);
+  };
+  
+  server.disconnectionListener = function(e, s) {
+    serverDisconnected(e, s, serverActionBar);
+  };
+  
+  // contentManager.servers[server].errorListener = serverError;
+  
+  // add the toggle switch to switch classed checkboxes  
+  $('#updateServerForm .switch').on("click", toggleSwitch);
+  
+  // add the drop down logic for the drop downs  
+  new DropDown( $('#serverUpdateCommsSecurityWrapper') );
+}
+
+function removeServer(server) {
+  // TODO: prompt to confirm the action
+  
+  // set the focus to the home screen
+  setFocus(HOME_CONTROL_ID, HOME_CONTENT_ID);
+  
+  // unload the ui for the server
+  removeServerFromSidebar(server);
+  
+  // remove the server via the content manager
+  contentManager.removeServer(server);
+}
+
+function updateServer(server) {
+  // retrieve the values from the form and set to the server instance\
+  var newName = $('#serverUpdateName').val();
+  var newIpAddress = $('#serverUpdateIPAddress').val();
+  var newPort = $('#serverUpdatePort').val();
+  var newSecurePort = $('#serverUpdateSecurePort').val();
+  var newProtocol = $('#serverUpdateProtocol').val();
+  
+  var newUserId = $('#serverUpdateUserId').val();
+  var newPassword = $('#serverUpdatePassword').val();
+  var newCommsSecurity = $('#serverUpdateCommsSecurity').val();
+
+  var nameModified = server.name !== newName;
+  var hostDetailsModified =
+        server.ipAddress !== newIpAddress ||
+        server.port !== newPort ||
+        server.securePort !== newSecurePort ||
+        server.protocol !== newProtocol ||
+        server.userId !== newUserId ||
+        server.password !== newPassword ||
+        server.commsSecurity !== newCommsSecurity;
+  
+  server.name = newName;
+  server.ipAddress = newIpAddress;
+  server.port = newPort;
+  server.securePort = newSecurePort;
+  server.protocol = newProtocol;
+  server.userId = newUserId;
+  server.password = newPassword;
+  server.rememberPassword = $('#serverUpdateRememberPassword').is(':checked');
+  server.commsSecurity = newCommsSecurity;
+  // server.secureOnly = $('#serverUpdateSecureOnly').is(':checked');
+  server.log = $('#serverUpdateLoggingEnabled').is(':checked');
+
+  // persist the changes  
+  contentManager.updateServer(server);
+  
+  // update the ui if the name changes
+  if(nameModified) {
+    var serverControlId = SERVER_CONTROL + server.position;
+    
+    // update the control's text to the new name
+    updateControlOnSidebar(serverControlId, server.name);
+    
+    // update the on screen label to the new name
+    $('#' + LEFT_SIDEBAR_CONTROL_TEXT + SERVER_CONTENT + server.position + ACTION_BAR).text(server.name);
+  }
+  
+  // disconnect and reconnect if connected and the host details have been modified
+  if(hostDetailsModified && server.connected) {
+    disconnectServer(server);
+    connectServer(server);
+  }
+}
+
+function disconnectServer(server) {
+  server.disconnect();
+}
+
+function connectServer(server) {
+  server.connect();
+}
+
+/*
+ * addVehicleContentUI('vehicle1', 'Thunderbird 1');
+ */
+function addVehicleContentUI(id, vehicle, server) {
+  vehicleContentNbr = vehicle.position;
+  $('#mainApplication').append(
+    '<div id="' + id + '" class="applicationContents">' +
+    '  <div id="' + id + 'ContentSlider" class="contentSlider">' +
+    '    <div class="sliderWrapper">' +
+    '      <div id="' + id + TELEMETRY_SUB_ID + '" class="content sliderContent">' +
+    '        <div class="message">' +
+    '          <div class="messageContents">' +
+    '            <span>NO TELEMETRY FOUND</span><br/>' +
+    '            <span>You can add telemetry gauges via settings</span>' +
+    '          </div>' +
+    '        </div>' +
+    '      </div>' +
+    '      <div id="' + id + REMOTECONTROL_SUB_ID + '" class="content sliderContent">' +
+    '        <canvas id="' + id + REMOTECONTROL_CANVAS_ID  + '" class="controlCanvas">' +
+    '        </canvas>' +
+    '      </div>' +
+    '    </div>' +
+    '  </div>' +
+    '</div>');
+  
+  // add the pane to the tab manager
+  contentManager.addPane(id);
+  
+  // setup the telemetry settings  
+  var telemetrySettings = new ContentSettings();
+  
+  // TODO: should be populated 
+  telemetrySettings.add(new HeadingSetting('some stuff'));
+  telemetrySettings.add(new ToggleSetting(id  + TELEMETRY_SUB_ID + 'Graph', 'Graph'));
+  telemetrySettings.add(new TextSetting(id  + TELEMETRY_SUB_ID + 'Timeout', 'Timeout'));
+  telemetrySettings.add(new HeadingSetting('Gauges'));
+
+  // TODO: should this be here or outside this function scope?
+  function addGaugeToContentAreaSettings(contentAreaId, tabSettings, options) {
+    tabSettings.add(options);
+    
+    if(options.visible) {
+      showGauge(options, contentAreaId);
+    }
+  }
+  
+  // TODO: gauges and their options are to be cached locally but obtained remotely (possibly configured locally)
+  addGaugeToContentAreaSettings(id  + TELEMETRY_SUB_ID, telemetrySettings, new GaugeSetting(id  + TELEMETRY_SUB_ID + Gauge.SPEED, speedGauge, {x: 0, y: 0, width: 150, visible: true}));
+  addGaugeToContentAreaSettings(id  + TELEMETRY_SUB_ID, telemetrySettings, new GaugeSetting(id  + TELEMETRY_SUB_ID + Gauge.ATTITUDE, attitudeGauge, {x: 150, y: 0, width: 150, visible: true}));
+  addGaugeToContentAreaSettings(id  + TELEMETRY_SUB_ID, telemetrySettings, new GaugeSetting(id  + TELEMETRY_SUB_ID + Gauge.ALTIMETER, altimeterGauge, {x: 300, y: 0, width: 150, visible: true}));
+  addGaugeToContentAreaSettings(id  + TELEMETRY_SUB_ID, telemetrySettings, new GaugeSetting(id  + TELEMETRY_SUB_ID + Gauge.THERMOMETER, thermometerGauge, {x: 0, y: 150, width: 150, visible: false}));
+  addGaugeToContentAreaSettings(id  + TELEMETRY_SUB_ID, telemetrySettings, new GaugeSetting(id  + TELEMETRY_SUB_ID + Gauge.HEADING, headingGauge, {x: 150, y: 150, width: 150, visible: true}));
+  addGaugeToContentAreaSettings(id  + TELEMETRY_SUB_ID, telemetrySettings, new GaugeSetting(id  + TELEMETRY_SUB_ID + Gauge.VSI, vsiGauge, {x: 300, y: 150, width: 150, visible: false}));
+
+  // setup the remote control settings
+  var remoteControlSettings = new ContentSettings();
+  remoteControlSettings.add(new HeadingSetting('some stuff'));
+  
+  // setup the action bar  
+  new ActionBar({
+    targetId: id,
+    id: id + ACTION_BAR,
+    title: vehicle.name,
+    takeoff: true,
+    takeoffFunction: function() {
+      if(server) {
+        server.sendMessage(Message.CMD_TAKEOFF, {id: vehicle.id, name: vehicle.name});
+      }
+    },
+    land: true,
+    landFunction: function() {
+      if(server) {
+        server.sendMessage(Message.CMD_LAND, {id: vehicle.id, name: vehicle.name});
+      }
+    },
+    abort: true,
+    abortFunction: function() {
+      if(server) {
+        server.sendMessage(Message.CMD_EMERGENCY_STOP, {id: vehicle.id, name: vehicle.name});
+      }
+    },
+    settings: true,
+    settingsFunction: function() {
+      loadSidebar(contentManager.getFocusedTabId(), 'rightScroller');
+      showSidebar('rightSidebar', 'right', 'mainApplication', 'mainApplicationOverlay', 'mainApplicationOverlay', '300ms');
+    
+      return false;
+    }
+  })
+  .initialise()
+  .addTab(id + TELEMETRY_TAB_CONTROL, 'Telemetry', TELEMETY_TAB, vehicle.position, true)
+  .addDivider()
+  .addTab(id + REMOTECONTROL_TAB_CONTROL, 'Remote Control', REMOTE_CONTROL_TAB, vehicle.position);
+
+/*
+  if(server) {
+    if(server.isConnected) {
+      serverActionBar.toggleAction(ActionBar.CONNECTION, true);
+    } else {
+      serverActionBar.toggleAction(ActionBar.CONNECTION, false);
+    }
+    
+    // setup listener for the server that is being updated
+  
+    server.connectionListener = function(e) { 
+      serverConnected(e, serverActionBar);
+    };
+    
+    server.disconnectionListener = function(e, s) {
+      serverDisconnected(e, s, serverActionBar);
+    };
+  }
+  */
+  
+  
+  contentManager.addTab(id, id  + TELEMETRY_SUB_ID, telemetrySettings);
+  contentManager.addTab(id, id  + REMOTECONTROL_SUB_ID, remoteControlSettings);
+  
+  contentManager.addSettings(id + TELEMETRY_SUB_ID, telemetrySettings);
+  contentManager.addSettings(id + REMOTECONTROL_SUB_ID, remoteControlSettings);
+
+  // set the tab manager for this panel to the first tab (which is the selected tab)
+  // todo: should this be PAYLOAD_SUB_ID and not PAYLOAD_TAB_CONTROL?
+  contentManager.setFocusedTabNbr(id, 0);
+  contentManager.setFocusedTabId(id, id  + TELEMETRY_SUB_ID);
+  contentManager.setCurrentContent(id  + TELEMETRY_SUB_ID);
+  contentManager.setCurrentVehicle(vehicle);
+  
+  /* TODO: appears removing the callback and adding slideCallback worked, but requires futher testing when
+   * the issues with side bar navigation are sorted out
+   */
+  // setup the swipe using Slider for the vehicle content
+  
+  vehicleContentSlider[vehicle.position] = new Swipe(document.getElementById(id + 'ContentSlider'), {
+// TODO: how do we get e? do not need it now but is annoying...
+      slideCallback: function(position) { contentTabChanged('', position, id, vehicle.position); },
+      slideEffect: 'android'
+    });
+  
+  var directControlListener = function(e) {
+    /*
+     * TODO: make the controls mappable, ie. configurable
+     * 
+     * right control:
+     *   up/down    - vehicle up and down
+     *   left/right - vehicle rotates left and right
+     * left control:
+     *   up/down    - vhiecle moves forewards and backwards
+     *   left/right - vehicle moves left and right
+     *
+     */
+    /*
+    console.log('id: ' + 
+		    e.controlId + ' dir: ' +
+		    e.direction + ' X Str: ' +
+		    e.strengthX + ' Y Str: ' +
+		    e.strengthY);
+		    */
+    
+    setTelemetry(contentManager.currentVehicle.telemetry);
+    
+    if(e.controlId == TouchControls.LEFT) {
+      switch(e.controlId) {
+        case TouchControls.UP:
+          // up
+          break;
+        case TouchControls.UP_RIGHT:
+          // up and rotate right
+          break;
+        case TouchControls.RIGHT:
+          // rotate right
+          break;
+        case TouchControls.DOWN_RIGHT:
+          // down and rotate right
+          break;
+        case TouchCOntrols.DOWN:
+          // down
+          break;
+        case TouchControls.DOWN_LEFT:
+          // down and rotate left
+          break;
+        case TouchControls.LEFT:
+          // rotate left
+          break;
+        case TouchControls.UP_LEFT:
+          // up and rotate left
+          break;
+      }
+    } else if(e.controlId == TouchControls.RIGHT) {
+      switch(e.controlId) {
+        case TouchControls.UP:
+          // forward
+          break;
+        case TouchControls.UP_RIGHT:
+          // forward and right
+          break;
+        case TouchControls.RIGHT:
+          // right
+          break;
+        case TouchControls.DOWN_RIGHT:
+          // backward and right
+          break;
+        case TouchCOntrols.DOWN:
+          // backward
+          break;
+        case TouchControls.DOWN_LEFT:
+          // down and backward
+          break;
+        case TouchControls.LEFT:
+          // left
+          break;
+        case TouchControls.UP_LEFT:
+          // forward and left
+          break;
+      }
+    }
+  }
+  // setup the controls
+  var touchControls = new TouchControls({
+      canvas: $('#' + id + REMOTECONTROL_CANVAS_ID)[0],
+      leftDirectionListener: directControlListener,
+      rightDirectionListener: directControlListener});
+  
+  touchControls.initialise();
+  
+  window.onorientationchange = touchControls.resetCanvas;  
+  window.onresize = touchControls.resetCanvas;  
+  
+  // TODO: stop using setInterval
+  setInterval(touchControls.drawCanvas.bind(touchControls), 1000/touchControls.frameRate);
+}
+
+function addPayloadContentUI(id) {
+  $('#mainApplication').append(
+    '<div id="' + id + '" class="applicationContents">' +
+    '  <div id="payloadMap" class="map">' +
+    '  </div>' +
+    '</div>');
+  
+  // setup the settings for the payload
+  var payloadSettings = new ContentSettings();
+  payloadSettings.add(new HeadingSetting('some stuff'));
+  payloadSettings.add(new ToggleSetting(id  + PAYLOAD_SUB_ID + 'Graph', 'Graph'));
+  payloadSettings.add(new TextSetting(id  + PAYLOAD_SUB_ID + 'Timeout', 'Timeout'));
+  contentManager.addSettings(id, payloadSettings);
+  
+  // setup the action bar  
+  new ActionBar({
+    targetId: id,
+    id: id + ACTION_BAR,
+    title: "Payload",
+    settings: true
+  }).initialise();
+
+  // setup the map
+  
+  // TODO: tidy up the mapping logic
+  
+  var mapquestOsmTileUrl = 'http://otile{s}.mqcdn.com/tiles/1.0.0/osm/{z}/{x}/{y}.png',
+      mapquestOsmAttribution = "Data CC-By-SA by <a href='http://openstreetmap.org/' target='_blank'>OpenStreetMap</a>, Tiles Courtesy of <a href='http://open.mapquest.com' target='_blank'>MapQuest</a>";
+
+  var opencyclemapLandscapeUrl = 'http://{s}.tile3.opencyclemap.org/landscape/{z}/{x}/{y}.png',
+      opencyclemapLandscapeAttribution = '&copy; <a href="http://www.opencyclemap.org">OpenCycleMap</a>, <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>';
+      
+      
+  var esriWorldTopographicalUrl = 'http://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+      esriWorldTopographicalAttribution = 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community';
+  
+  var esriWorldImageryUrl = 'http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      esriWorldImageryAttribution = 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community';
+
+  var cloudmadeTilesUrl = 'http://{s}.tile.cloudmade.com/21AE2933E8054FF8b90A537357289E78/{styleId}/256/{z}/{x}/{y}.png',
+      cloudmadeAttribution = 'Map data &copy; 2011 OpenStreetMap contributors, Imagery &copy; 2011 CloudMade';
+
+  var esriWorldImageryTileLayer = new L.TileLayer(esriWorldImageryUrl, {maxZoom: 18, attribution: esriWorldImageryAttribution,subdomains: ['1', '2', '3', '4']});
+  var esriWorldTopographicalTileLayer = new L.TileLayer(esriWorldTopographicalUrl, {maxZoom: 18, attribution: esriWorldTopographicalAttribution,subdomains: ['1', '2', '3', '4']});
+  var esriWorldTopographicalTileLayer2 = new L.TileLayer(esriWorldTopographicalUrl, {maxZoom: 18, attribution: esriWorldTopographicalAttribution,subdomains: ['1', '2', '3', '4']});
+
+  var mapquestOsmTileLayer = new L.TileLayer(mapquestOsmTileUrl, {maxZoom: 18, attribution: mapquestOsmAttribution, subdomains: ['1', '2', '3', '4']});
+  
+  var minimal   = L.tileLayer(cloudmadeTilesUrl, {styleId: 22677, attribution: cloudmadeAttribution}),
+    fresh  = L.tileLayer(cloudmadeTilesUrl, {styleId: 997, attribution: cloudmadeAttribution}),
+    midnightCommander  = L.tileLayer(cloudmadeTilesUrl, {styleId: 999, attribution: cloudmadeAttribution}),
+    nightVision  = L.tileLayer(cloudmadeTilesUrl, {styleId: 78125, attribution: cloudmadeAttribution}),
+    minimalMarkers = L.tileLayer(cloudmadeTilesUrl, {styleId: 63044, attribution: cloudmadeAttribution});
+
+  // set the default image path for te icon
+  L.Icon.Default.imagePath = 'assets/img/';
+    
+  var payloadLayers = {
+    "Fresh": fresh,
+    "Minimal": minimal,
+    "Minimal 2": minimalMarkers,
+    "Night Vision": nightVision,
+    "Night View": midnightCommander,
+    "Map Quest Street": mapquestOsmTileLayer,
+    "ESRI World Imagery": esriWorldImageryTileLayer,
+    "ESRI World Topographical": esriWorldTopographicalTileLayer
+  };
+  
+  // setup the map
+  var payloadMap = new L.Map('payloadMap', {
+    center: [-27.632600, 153.146466],
+    zoom: 10,
+    layers: [esriWorldTopographicalTileLayer2],
+    zoomControl: false
+  });
+  
+  L.control.scale().addTo(payloadMap);
+  
+  // L.control.layers(payloadLayers).addTo(payloadMap);
+
+  // payloadMap.panTo(new L.LatLng(-27.47718, 153.02712));
+}
+
+function addNavigationContentUI(id) {
+  var navigationMapId = 'navigationMap';
+  
+  $('#mainApplication').append(
+    '<div id="' + id + '" class="applicationContents">' +
+    '  <div id="' + navigationMapId + '" class="map">' +
+    '  </div>' +
+    '</div>');
+  
+  // add forms used by navigation content
+  addNavPointForm(id, navigationMapId + "NavPoint");
+  addVehicleToMapForm(id, navigationMapId + "AddVehicleToMap");
+  
+  // setup the navigation settings
+  // TODO: are these used?
+  var navigationSettings = new ContentSettings();
+  navigationSettings.add(new HeadingSetting('some stuff'));
+  contentManager.addSettings(id, navigationSettings);
+  
+  // setup the navigation manager
+  navigationManager = new Navigation({
+    mapMenuId: 'mapMenu',
+    vehicleMenuId: 'vehicleMenu',
+    pointMenuId: 'navPointMenu',
+    remoteVehicles: contentManager.remoteVehicles,
+    servers: contentManager.servers,
+    localVehicles: contentManager.vehicles
+    });
+  
+  var navContentSettings = null;
+  
+  // setup the action bar  
+  new ActionBar({
+    targetId: id,
+    id: id + ACTION_BAR,
+    title: "Navigation",
+    settings: true,
+    save: true,
+    saveFunction: updateNavPathsForVehicles,
+    preShowSidebarFn: function() {
+      // hide pie menus if any visible
+      navigationManager.hideMenus();
+    },
+    settingsFunction: function() {
+      // hide pie menus if any visible
+      navigationManager.hideMenus();
+      
+      var targetId = id;
+      var containerId = RIGHT_SIDEBAR_CONTAINER_ID; //'rightScroller';
+      
+      // TODO: tidy this up, just a hack for time being to increase performance, otherwise this executes everytime the side pane is displayed
+      if(navContentSettings == null) {
+        $('#' + containerId).empty();
+  
+        // TODO: groups are handled differently for right and left, should be the same (see css leftSidebarGroupHeading)
+        
+        // add a vehicles heading
+        addHeadingToSidebar(containerId, "Vehicles");
+        
+        // get all the remote vehicles
+        var vehicles = contentManager.getRemoteVehicles();
+        
+        // TODO: include local vehicles...
+        
+        // iterate through the vehicles and add a layer control to turn on/off each vehicle's navigation info
+        for(var i = 0, l = vehicles.length; i < l; i++) {
+            // determine the icon for the vehicle
+            var icon = getVehicleIcon(vehicles[i]);
+            
+            addSelectorToSidebar(containerId, 'vehicle' + i, vehicles[i].name, '', icon, true,
+              function() {
+                
+                // TODO: insert logic here for selecting visibility of the layer that shows the navigation vectors and icons for the vehicle
+                
+                // if(gaugeSetting.visible) {
+                //   gaugeSetting.visible = !hideGauge(gaugeSetting.gaugeId);
+                // } else {
+                //   gaugeSetting.visible = showGauge(gaugeSetting, contentManager.getFocusedTabId());
+                // }
+                
+              });
+        }
+        
+        // add a options heading
+        addHeadingToSidebar(containerId, "Map Style");
+        
+        function createCallbackSelectTileSetFn(i) {
+          return function () {
+            navigationManager.selectMapStyle(i);
+          }
+        }
+        var radioGroup = new Array();
+        for(var i = 0, l = navigationManager.mapLayers.length; i < l; i++) {
+          radioGroup.push('mapStyle' + i);
+        }
+        
+        for(var i = 0, l = navigationManager.mapLayers.length; i < l; i++) {
+          addSelectorToSidebar(containerId,
+                               radioGroup[i],
+                               navigationManager.mapLayers[i].title,
+                               navigationManager.mapLayers[i].description,
+                               navigationManager.mapLayers[i].icon,
+                               false,
+                               createCallbackSelectTileSetFn(i),
+                               true,
+                               radioGroup
+                               );
+        }
+
+        // toggle the first one, as this is the default
+        $('#selector' + radioGroup[0] + 'ControlArea').toggleClass('controlIconAreaSelected');
+        
+        // TODO: tidy this up, just a hack for time being to increase performance, otherwise this executes everytime the side pane is displayed
+        navContentSettings = '';
+      }
+      
+      // TODO: this is always the same, should make it more generic?
+      showSidebar('rightSidebar', 'right', 'mainApplication', 'mainApplicationOverlay', 'mainApplicationOverlay', '300ms');
+      
+      // reset the scroller for the right sidebar as content has changed
+      verticalScrollRightSidebar.refresh();
+
+      return false;
+    }
+  }).initialise();
+}
+
+function updateNavPathsForVehicles() {
+  // vehicles = navigationManager.getModifiedVehicles();
+
+  // presuming for remote server...
+  
+  // TODO: add support for local
+  
+  // obtain vehicle and determine which server it is on...
+  var remoteServer;
+
+  var vehicles = contentManager.getRemoteVehicles();
+
+  // find a connected server and use it
+  
+  // TODO: should determine which server has the vehicle, maybe change server to remember what vehicles are on it?
+
+  // find a server that manages the vehicle
+  for(i = 0, l = contentManager.servers.length; i < l; i++) {
+    if(contentManager.servers[i].isConnected) {
+      remoteServer = contentManager.servers[i];
+      break;
+    }
+  }
+
+  // couldn't find a connected server, do nothing
+  // TODO: add logic to display an error...
+  if(!remoteServer) {
+    return;
+  }
+
+  // TODO: include local vehicle support
+    
+  // iterate through the vehicles and send an update
+  
+  // TODO: determine which vehicles are modified and only send vehicles with dirty data, not all vehicles.
+  
+  for(var i = 0, l = vehicles.length; i < l; i++) {
+    
+    var msg = new Object();
+    
+    msg.id = vehicles[i].id;
+    msg.navPath = vehicles[i].navigationPath;
+    msg.onMap = vehicles[i].onMap;
+    
+    remoteServer.sendMessage(Message.UPDATE_NAV_PATH, msg);
+  }
+}
+
+var ADD_TO_MAP_VEHICLES_DROPDOWN_ID = "unallocatedVehiclesDropDownAddToMap";
+
+function populateAvailVehiclesDropDown(id) {
+  var elem = $('#' + id);
+  // remove current list
+  elem.empty();
+  
+  elem.append(getAvailVehiclesDropDown());
+}
+
+function getAvailVehiclesDropDown() {
+  var vehicleList = '';
+  
+  // generate the vehicle list by first iterating through all servers...
+  if(contentManager.servers) {
+    for(var i = 0, l = contentManager.servers.length; i < l; i++) {
+      for(var i2 = 0, l2 = contentManager.remoteVehicles[contentManager.servers[i].name].length; i2 < l2; i2++) {
+        vehicle = contentManager.remoteVehicles[contentManager.servers[i].name][i2];
+        
+        // if the vehicle is on the map then add it
+        if(!vehicle.onMap) {
+          vehicleList += 
+            '              <li>' +
+            '                <a href="#">' +
+            '                  <img class="dropdownIcon" src="' + getVehicleIcon(vehicle) + '" />' +
+            '                  <span class="dropdownText" key="' + vehicle.id + '">' +  vehicle.name + '</span>' +
+            '                </a>' +
+            '              </li>';
+        }
+      }
+    }
+  }
+  
+  // TODO: id for local vehicles is not set as currently have no means to obtain uuid
+  if(contentManager.localVehicles) {
+    for(var i = 0, l = contentManager.localVehicles.length; i < l; i++) {
+      vehicleList += 
+        '              <li>' +
+        '                <a href="#">' +
+        '                  <img class="dropdownIcon" src="' + getVehicleIcon(contentManager.localVehicles[i]) + '" />' +
+        '                  <span class="dropdownText key="' + contentManager.localVehicles[i].id + '">' +  contentManager.localVehicles[i].name + '</span>' +
+        '                </a>' +
+        '              </li>';
+        
+    }
+  }
+
+  return vehicleList;
+}
+
+function addVehicleToMapForm(parentId, id) {
+
+  var vehicleList = getAvailVehiclesDropDown();
+  
+  $('#' + parentId).append(
+    '<div id="' + id + '" class="applicationContents modalContents">' +
+    '  <div id="' + id + 'Form" class="formContainer">' +
+    '    <div class="formContents">' +
+    '      <div class="formContents">' +
+    '       <form id="vehicleAddToMapForm">' +
+    '         <ul>' +
+
+    '           <li>' +
+    '            <label for="vehicleAddToMapVehicle">Type of vehicle</label>' +
+    '            <div id="vehicleAddToMapVehicleWrapper" class="dropdownwrapper">' +
+    '             <input type="popup" name="remoteServer" id="vehicleAddToMapVehicle" placeholder="VehicleType" readonly="true">' +
+    '             <span class="triangle"></span>' +
+    '             <ul id="' + ADD_TO_MAP_VEHICLES_DROPDOWN_ID + '" class="dropdown">' +
+    
+    vehicleList +
+    
+    '             </ul>' +
+    '            </div>' +
+    '           </li>' +
+    
+    '           <li class="breakTop">' + 
+    '             <label for="vehicleAddToMapAltitude">Default Altitude</label>' +
+    '             <input type="text" name="altitude" id="vehicleAddToMapAltitude" placeholder="" required><br>' +
+    '           </li>' + 
+    '           <li>' + 
+    '             <label for="vehicleAddToMapSpeed">Default Speed</label>' +
+    '             <input type="text" name="address" id="vehicleAddToMapSpeed" placeholder="" required><br>' +
+    '           </li>' + 
+    '           <li class="breakTop">' + 
+    '           <li>' +
+    '             <label for="vehicleAddToMapLoiterSpeed">Default Loiter Radius</label>' +
+    '             <input type="number" min="1" max="99999" name="loiterRadius" id="vehicleAddToMapLoiterRadius" placeholder=""><br>' +
+    '           </li>' + 
+    '           <li>' +
+    '             <label for="vehicleAddToMapLoiterSpeed">Default Loiter Speed</label>' +
+    '             <input type="number" min="1" max="99999" name="loiterSpeed" id="vehicleAddToMapLoiterSpeed" placeholder="1 to 100"><br>' +
+    '           </li>' + 
+    '           <li>' + 
+    '             <label for="vehicleAddToMapLoiterDuration">Default Loiter Duration</label>' +
+    '             <input type="number" min="1" max="99999" name="loiterDuration" id="vehicleAddToMapLoiterDuration" placeholder=""><br>' +
+    '           </li>' + 
+    '           <li>' + 
+    '             <label for="vehicleAddToMapLoiterDurationUOM">Default Loiter Duration UOM</label>' +
+    '             <input type="text" name="loiterDurationUOM" id="vehicleAddToMapDurationUOM" placeholder=""><br>' +
+    '           </li>' +
+    '       </form>' +
+    '      </div>' +
+    '    </div>' +
+    '  </div>' +
+    '</div>');
+
+  vehicleAddToMapDropDown = new DropDown($('#vehicleAddToMapVehicleWrapper'));
+  
+  // setup and initialise the action bar
+  addVehicleToMapModalBar = new ModalBar({ targetId: id, id: id + MODAL_BAR,})
+    .initialise();
+}
+
+// TODO: this drop down being here is really really ugly
+var vehicleAddToMapDropDown = null;
+
+var addVehicleToMapModalBar = null;
+
+function showAddVehicleToMapForm(latLng) {
+  // set values
+  
+  // setup the drop down to only the currently available vehicles (ie. not already on the map)
+  populateAvailVehiclesDropDown(ADD_TO_MAP_VEHICLES_DROPDOWN_ID);
+  // reset the map drop down
+  vehicleAddToMapDropDown.initList();
+  
+  // TODO: in preferences or in vehicle setup default values for adding a vehicle to the map
+  
+  // don't let the vehicle default to the last one used
+  $('#vehicleAddToMapVehicle').val('');
+
+  $('#vehicleAddToMapAltitude').val('');
+  $('#vehicleAddToMapSpeed').val('');
+  $('#vehicleAddToMapLoiterSpeed').val('');
+  $('#vehicleAddToMapLoiterSpeed').val('');
+  $('#vehicleAddToMapLoiterDuration').val('');
+  $('#vehicleAddToMapLoiterDurationUOM').val('');
+
+  var that = this;
+  addVehicleToMapModalBar.setAcceptFunction(function() {acceptAddVehicleToMapModalBarUpdate.bind(that)(latLng)});
+  addVehicleToMapModalBar.show();
+}
+
+function acceptAddVehicleToMapModalBarUpdate(latLng) {
+  // process the values
+  var altitude = $('#vehicleAddToMapAltitude').val();
+  var speed = $('#vehicleAddToMapSpeed').val();
+  var loiterRadius = $('#vehicleAddToMapLoiterRadius').val();
+  var loiterSpeed = $('#vehicleAddToMapLoiterSpeed').val();
+  var loiterTime = $('#vehicleAddToMapLoiterDuration').val();
+  var loiterDurationUOM = $('#vehicleAddToMapLoiterDurationUOM').val();
+  
+  var vehicleId = $('#vehicleAddToMapVehicle').val();
+  var vehicle = null;
+  var found = false;
+  vehicleId = vehicleAddToMapDropDown.getKey();
+  
+  // determine the vehicle, TODO: move this logic to the content manager possibly?
+  for(var i = 0, l = contentManager.servers.length; i < l; i++) {
+    for(var i2 = 0, l2 = contentManager.remoteVehicles[contentManager.servers[i].name].length; i2 < l2; i2++) {
+      vehicle = contentManager.remoteVehicles[contentManager.servers[i].name][i2];
+
+      if(vehicle.id == vehicleId) {
+        found = true;
+        break;
+      }
+    }
+  }
+
+  // found the vehicle so lets add it  
+  if(found) {
+    navigationManager.addVehicle(vehicle, latLng.lat, latLng.lng, true);
+    navigationManager.selectVehicle(vehicle);
+  }
+}
+
+function addNavPointForm(parentId, id) {
+
+  $('#' + parentId).append(
+    '<div id="' + id + '" class="applicationContents modalContents">' +
+    '  <div id="' + id + 'Form" class="formContainer">' +
+    '    <div class="formContents">' +
+    '      <div class="formContents">' +
+    '       <form id="updateNavPointForm">' +
+    '         <ul>' + 
+    '           <li>' +
+    '             <label for="navPointSequence">Sequence</label>' +
+    '             <input type="text" name="sequence" id="navPointSequence" readonly="readonly" disabled="disabled"><br>' +
+    '           </li>' + 
+    '           <li class="breakTop">' + 
+    '             <label for="navPointUpdateLabel">Label</label>' +
+    '             <input type="text" name="label" id="navPointUpdateLabel" placeholder="Label" ><br>' +
+    '           </li>' + 
+    '           <li>' + 
+    '             <label for="navPointUpdateAltitude">Altitude</label>' +
+    '             <input type="text" name="altitude" id="navPointUpdateAltitude" placeholder="100" required><br>' +
+    '           </li>' + 
+    '           <li>' + 
+    '             <label for="navPointUpdateSpeed">Speed</label>' +
+    '             <input type="text" name="address" id="navPointUpdateSpeed" placeholder="100%" required><br>' +
+    '           </li>' + 
+    '           <li class="breakTop">' + 
+    '           <li>' +
+    '             <label for="navPointUpdateLoiterSpeed">Loiter Radius</label>' +
+    '             <input type="number" min="1" max="99999" name="loiterRadius" id="navPointUpdateLoiterRadius" placeholder="loiter radius"><br>' +
+    '           </li>' + 
+    '           <li>' +
+    '             <label for="navPointUpdateLoiterSpeed">Loiter Speed</label>' +
+    '             <input type="number" min="1" max="99999" name="loiterSpeed" id="navPointUpdateLoiterSpeed" placeholder="100%"><br>' +
+    '           </li>' + 
+    '           <li>' + 
+    '             <label for="navPointUpdateLoiterDuration">Loiter Duration</label>' +
+    '             <input type="number" min="1" max="99999" name="loiterDuration" id="navPointUpdateLoiterDuration" placeholder="1"><br>' +
+    '           </li>' + 
+    '           <li>' + 
+    '             <label for="navPointUpdateLoiterDurationUOM">Loiter Duration UOM</label>' +
+    '             <input type="text" name="loiterDurationUOM" id="navPointUpdateLoiterDurationUOM" placeholder="Minute"><br>' +
+    '           </li>' +
+    '       </form>' +
+    '      </div>' +
+    '    </div>' +
+    '  </div>' +
+    '</div>');
+
+  // setup and initialise the action bar
+  navPointModalBar = new ModalBar({ targetId: id, id: id + MODAL_BAR,})
+    .initialise();
+}
+
+var navPointModalBar = null;
+
+function showNavPointForm(navPoint) {
+  
+  // disable/enable the loiter fields, as appropriate
+  $('#navPointUpdateLoiterRadius').prop('disabled', !navPoint.loiter);
+  $('#navPointUpdateLoiterSpeed').prop('disabled', !navPoint.loiter);
+  $('#navPointUpdateLoiterDuration').prop('disabled', !navPoint.loiter);
+  $('#navPointUpdateLoiterDurationUOM').prop('disabled', !navPoint.loiter);
+  
+  // we need to do this so css for the style is applied
+  if(navPoint.loiter) {
+    $('#navPointUpdateLoiterRadius').removeAttr('readonly', '');
+    $('#navPointUpdateLoiterSpeed').removeAttr('readonly', '');
+    $('#navPointUpdateLoiterDuration').removeAttr('readonly', '');
+    $('#navPointUpdateLoiterDurationUOM').removeAttr('readonly', '');;
+  } else {
+    $('#navPointUpdateLoiterRadius').attr('readonly', 'readonly');
+    $('#navPointUpdateLoiterSpeed').attr('readonly', 'readonly');
+    $('#navPointUpdateLoiterDuration').attr('readonly', 'readonly');
+    $('#navPointUpdateLoiterDurationUOM').attr('readonly', 'readonly');;
+  }
+  // set values
+  $('#navPointSequence').val(navPoint.sequence);
+  $('#navPointUpdateAltitude').val(navPoint.altitude);
+  $('#navPointUpdateSpeed').val(navPoint.speed);
+  $('#navPointUpdateLoiterRadius').val(navPoint.loiterRadius);
+  $('#navPointUpdateLoiterSpeed').val(navPoint.loiterSpeed);
+  $('#navPointUpdateLoiterDuration').val(navPoint.loiterTime);
+  $('#navPointUpdateLoiterDurationUOM').val(navPoint.loiterDurationUOM);
+  
+  navPointModalBar.setAcceptFunction(function() {acceptNavPointUpdate(navPoint)});
+  navPointModalBar.show();
+}
+
+function acceptNavPointUpdate(navPoint) {
+  // update the navPoint
+  navPoint.altitude = $('#navPointUpdateAltitude').val();
+  navPoint.speed = $('#navPointUpdateSpeed').val();
+  navPoint.loiterRadius = $('#navPointUpdateLoiterRadius').val();
+  navPoint.loiterSpeed = $('#navPointUpdateLoiterSpeed').val();
+  navPoint.loiterTime = $('#navPointUpdateLoiterDuration').val();
+  navPoint.loiterDurationUOM = $('#navPointUpdateLoiterDurationUOM').val();
+}
+
+var navigationManager = null;
+
+function removeVehicle(vehicle) {
+  // TODO: prompt to confirm the action
+  
+  // set the focus to the home screen
+  setFocus(HOME_CONTROL_ID, HOME_CONTENT_ID);
+  
+  // unload the ui for the server
+  removeVehicleFromSidebar(vehicle);
+  
+  // remove the vehicle via the content manager
+  contentManager.removeVehicle(vehicle);
+}
+
+/*
+ * add a control to the sidebar, before the specified id
+ */
+function addControlToSidebarBeforeId(beforeId, id, icon, name) {
+  $('#' + beforeId).before(
+    '<div id="' + id + '" class="sidebarControlBar">' +
+    '  <div class="sidebarControlIcon"><img src="' + icon + '" class="sidebarControlIcon"/></div>' +
+    '  <div id="' + id + 'Name" class="sidebarControlText centered">' + name + '</div>' +
+    '</div>');
+}
+
+function updateControlOnSidebar(id, name) {
+  $('#' + id + 'Name').text(name);
+}
+
+function appendControlToSidebar(groupId, id, icon, name) {
+  $('#' + groupId).append(
+    '<div id="' + id + '" class="sidebarControlBar">' +
+    '  <div class="sidebarControlIcon"><img src="' + icon + '" class="sidebarControlIcon"/></div>' +
+    '  <div class="sidebarControlText centered">' + name + '</div>' +
+    '</div>');
+}
+
+var deletePreviousContent = false;
+var previousContentId;
+var previousControlId;
+
+function addListenerToSidebarControl(sidebarId, controlId, paneId, contentLoadFunction) {
+  $('#' + controlId).click(function() {
+    // if reselecting the same then nothing to do other than hide the sidebar
+    // note that using control id as the content id for vehicles is always the same
+    // TODO: may need to change checks in setFocus to use controlId instead of content Id
+    if(controlId !== previousControlId) {
+    
+      // if the previous content is deletable then delete it
+      if(deletePreviousContent) {
+        $('#' + previousContentId).remove();
+      }
+      
+      previousControlId = controlId;
+      previousContentId = paneId;
+      deletePreviousContent = false;
+      
+      // if the contentLoadFunction is defined then execute it to load the content
+      if(typeof contentLoadFunction !== 'undefined') {
+        contentLoadFunction();
+        deletePreviousContent = true;
+      }
+  
+      // set the focus, which switches the view to the content
+      setFocus(controlId, paneId, true);
+    }
+    
+    // hide the sidebar as it is hidden when a content selection is made
+    hideSidebar(sidebarId, 'mainApplication', 'mainApplicationOverlay', '300ms');
+  });
+}
+
+function contentTabChanged(e, position, id, contentNbr) {
+  // turn off the currently selected tab
+  switch(contentManager.getFocusedTabNbr(id)) {
+    case TELEMETY_TAB:
+      $('#' + id + TELEMETRY_TAB_CONTROL).toggleClass('tabSelected');
+      break;
+    case REMOTE_CONTROL_TAB:
+      $('#' + id + REMOTECONTROL_TAB_CONTROL).toggleClass('tabSelected');
+      break;
+  }
+  
+  // todo: remove following as replaced by contentManager
+  // vehicleTabSelection[contentNbr] = position;
+  contentManager.setFocusedTabNbr(id, position);
+  
+  // turn on the new tab
+  switch (position) {
+    case TELEMETY_TAB:
+      $('#' + id + TELEMETRY_TAB_CONTROL).toggleClass('tabSelected');
+      contentManager.setFocusedTabId(id, id + TELEMETRY_SUB_ID);
+      contentManager.setCurrentContent(id + TELEMETRY_SUB_ID);
+      break;
+    case REMOTE_CONTROL_TAB:
+      $('#' + id + REMOTECONTROL_TAB_CONTROL).toggleClass('tabSelected');
+      contentManager.setFocusedTabId(id, id + REMOTECONTROL_SUB_ID);
+      contentManager.setCurrentContent(id + REMOTECONTROL_SUB_ID);
+      break;
+  }
+}
+
+function setFocus(controlId, paneId, forceFocus) {
+  forceFocus = ((forceFocus != null) ? forceFocus : false);
+
+  // if the current focus is the selected focus then no need to do anything
+  if(contentManager.focusedPaneId == paneId && !forceFocus) {
+    return;
+  }
+  
+  // turn off the control for the current focus, if set
+  if(currentFocusControlId != '') {
+    $('#' + currentFocusControlId).toggleClass('sidebarControlActive');
+  }
+  
+  // turn on the control for the set focus
+  $('#' + controlId).toggleClass('sidebarControlActive');
+  
+  // update the focus to the set focus
+  currentFocusControlId = controlId;
+  
+  contentManager.setCurrentContent(controlId);
+
+  // display the selected content before hiding, so no flickering white stuff
+  $('#' + paneId).css('visibility', 'visible');
+
+  // update the visbility of the previously focused pane  
+  if(contentManager.focusedPaneId != '' && contentManager.focusedPaneId != paneId) {
+    $('#' + contentManager.focusedPaneId).css('visibility', 'hidden');
+  }
+  
+  // set the content manager to the newly focused pane
+  contentManager.focusedPaneId = paneId;
+}
+
+/*
+ *
+ * showSidebar('rightSidebar', 'right', 'mainApplication', 'mainApplicationOverlay', 'mainApplicationOverlay', '300ms')
+ * showSidebar(LEFT_SIDEBAR_ID, 'left', 'mainApplication', 'mainApplicationOverlay', 'mainApplicationOverlay', '300ms')
+ * 
+ */
+function showSidebar(sidebarId, location, mainPanelId, overlayPanelId, overlayPanelCSS, time) {
+  var mainPanel = $('#' + mainPanelId);
+  var width = $('#' + sidebarId).width();
+  var overlayPanel = $('#' + overlayPanelId);
+  
+  // determine the x adjustment based on the location of the side bar
+  // we move negative if the side bar is right, positive if the side bar is left
+  var x = location == 'right' ? width * -1 : width;
+  
+  if (mainPanel.length > 0) {
+    // check if the overlay div exists, if not then create it
+    // TODO: determine if the overlay div should always exist and remove this logic to add it
+    if (overlayPanel.length <= 0) {
+      // create a div to overlay the main application
+      // this is to capture presses/clicks so as to restore the main application
+          
+      $(document.body).append('<div ' + 'id="' + overlayPanelId + '" class="' + overlayPanelCSS + '" ></div>');
+
+      // just created it, so set the var      
+      overlayPanel = $('#' + overlayPanelId);
+    }
+
+    overlayPanel.off('click');
+    // setup listener to restore main application
+    overlayPanel.on('click', function () { hideSidebar(sidebarId, mainPanelId, overlayPanelId, time) });
+    
+    overlayPanel.css('right', '');
+    overlayPanel.css('left', '');
+    overlayPanel.css(location, width + 'px');
+    
+    mainPanel.css('-webkit-transition', 'all ' + time + ' ease-in-out');
+    mainPanel.css('-moz-transition', 'all ' + time + ' ease-in-out');
+    mainPanel.css('-o-transition', 'all ' + time + ' ease-in-out');
+    mainPanel.css('transition', 'all ' + time + ' ease-in-out');
+
+    // listen to the end of the transition so the z-index can be updated
+    mainPanel.bind("webkitTransitionEnd oTransitionEnd transitionend msTransitionEnd", function(){
+      // at the end of the transformation, change the z-index of the side panel to a high value so
+      // there are no problems with slide scrolling stuff
+      $('#' + sidebarId).css('z-index', 200);
+
+      // remove the transition
+      mainPanel.unbind("webkitTransitionEnd oTransitionEnd transitionend msTransitionEnd");
+    });    
+    
+    mainPanel.css('-webkit-transform', 'translate(' + x + 'px, 0px)');
+    mainPanel.css('-moz-transform', 'translate(' + x + 'px, 0px)');
+    mainPanel.css('-o-transform', 'translate(' + x + 'px, 0px)');
+    mainPanel.css('transform', 'translate(' + x + 'px, 0px)');
+
+    /*
+     * TODO: check if the overlay div should be animated at the same time as the main application
+     * if we don't do this, it may be possible that a person tries to abort the showing of the side
+     * panel by pressing/clicking on the content but it wont work due to how it doesn't cover
+     * everywhere yet...
+     */
+    
+    // make the overlay div active by making it visible
+    $('#' + overlayPanelId).css('visibility', 'visible');
+  }
+}
+
+/*
+ *
+ * hideSidebar('mainApplication', 'mainApplicationOverlay', '300ms')
+ * showSidebar('mainApplication', 'mainApplicationOverlay', '300ms')
+ * 
+ */
+function hideSidebar(sidebarId, mainPanelId, overlayPanelId, time) {
+  var mainPanel = $('#' + mainPanelId);
+  
+  if (mainPanel.length > 0) {
+    // make the overlay div inactive by making it invisible
+    $('#' + overlayPanelId).css('visibility', 'hidden');
+    
+    // clear the z-index setting for the side bar    
+    $('#' + sidebarId).css('z-index', '');
+
+    // transform the main panel back into position    
+    mainPanel.css('-webkit-transition', 'all ' + time + ' ease-in-out');
+    mainPanel.css('-moz-transition', 'all ' + time + ' ease-in-out');
+    mainPanel.css('-o-transition', 'all ' + time + ' ease-in-out');
+    mainPanel.css('transition', 'all ' + time + ' ease-in-out');
+
+    mainPanel.css('-webkit-transform', 'translate(0px, 0px)');
+    mainPanel.css('-moz-transform', 'translate(0px, 0px)');
+    mainPanel.css('-o-transform', 'translate(0px, 0px)');
+    mainPanel.css('transform', 'translate(0px, 0px)');
+  }
+}
+
+// define gauges
+var videoGauge = new Gauge({name: 'video', title: 'Video', description: 'Live video feed',
+				 icon: 'assets/icons/drawable-xhdpi-v11/ic_stat_video.png',
+				 contentIsCanvas: true});
+var speedGauge = new Gauge({name: 'speed', title: 'Speed', description: 'Relative to surounding air',
+			         icon: 'assets/icons/drawable-xhdpi-v11/ic_stat_gauge.png',
+			         backgroundImg: 'assets/gauges/gauge_base_s.png',
+			         dialImg: 'assets/gauges/speed_background_s.png',
+			         needleImg1: 'assets/gauges/speed_needle_s.png',
+			         foregroundImg: 'assets/gauges/gauge_needle_cap_s.png'
+			         });
+var attitudeGauge = new Gauge({name: 'attitude', title: 'Attitude', description: 'Orientation aroud the center of mass',
+			         icon: 'assets/icons/drawable-xhdpi-v11/ic_stat_gauge.png',
+			         overlayImg: 'assets/gauges/attitude_foreground_s.png',
+			         foregroundImg: 'assets/gauges/gauge_base_plate_s.png',
+				 foregroundClips: true,
+			         needleImg1: 'assets/gauges/attitude_horizon_s.png',
+				 needleImg1Rotates: true,
+				 needleImg1VerticalScroll: true,
+				 needleImg1VerticalScrollType: 'relative',
+				 needleImg1XOffset: '-161px',
+				 needleImg1Height: '830px',
+			         needleImg2: 'assets/gauges/attitude_needle_s.png',
+				 mask: 'assets/gauges/gauge_base_mask_s.png'
+			         });
+var altimeterGauge = new Gauge({name: 'altimeter', title: 'Altimeter', description: 'Altitude above mean sea level',
+			          icon: 'assets/icons/drawable-xhdpi-v11/ic_stat_gauge.png',
+			         backgroundImg: 'assets/gauges/gauge_base_s.png',
+			         dialImg: 'assets/gauges/altimeter_background_s.png',
+			         needleImg1: 'assets/gauges/altimeter_large_needle_s.png',
+			         needleImg2: 'assets/gauges/altimeter_small_needle_s.png',
+			         foregroundImg: 'assets/gauges/gauge_needle_cap_s.png'
+			         });
+
+var headingGauge = new Gauge({name: 'heading', title: 'Heading', description: 'Direction in respect to magnetic north',
+			         icon: 'assets/icons/drawable-xhdpi-v11/ic_stat_compass.png',
+			         backgroundImg: 'assets/gauges/gauge_base_s.png',
+			         dialImg: 'assets/gauges/compass_background_s.png',
+			         needleImg1: 'assets/gauges/compass_needle_s.png'
+			         });
+				
+var vsiGauge = new Gauge({name: 'vsi', title: 'VSI', description: 'Vertical speed indicator',
+			         icon: 'assets/icons/drawable-xhdpi-v11/ic_stat_gauge.png',
+			         backgroundImg: 'assets/gauges/gauge_base_s.png',
+			         dialImg: 'assets/gauges/vsi_background_s.png',
+			         needleImg1: 'assets/gauges/vsi_needle_s.png',
+			         foregroundImg: 'assets/gauges/gauge_needle_cap_s.png'
+			         });
+				
+var thermometerGauge = new Gauge({name: 'thermometer', title: 'Thermometer', description: 'Engine tempurature',
+				 icon: 'assets/icons/drawable-xhdpi-v11/ic_stat_gauge.png',
+			         backgroundImg: 'assets/gauges/gauge_base_s.png',
+				 dialImg: 'assets/gauges/thermometer_background_s.png',
+				 needleImg1: 'assets/gauges/thermometer_needle_s.png',
+				 foregroundImg: 'assets/gauges/gauge_needle_cap_s.png'
+				 });
+
+/*
+ * setGaugeAngle()
+ *
+ * example:
+ *
+  // angle was calculated roughly from image, may need adjustment
+  var degree = 1.615;
+  var value = 1.615 * 100;
+ */
+function setGaugeAngle(gaugeId, indicatorName, degree, time) {
+  // lets play with the speed
+  var currentAngle = 0; 
+  var direction = 1;  // default positive
+
+  var obj = $('#instrument' + gaugeId + '_' + indicatorName);
+
+  if (obj.length > 0) {
+    obj.css('-webkit-transition', 'all ' + time + ' ease-in-out');
+    obj.css('-moz-transition', 'all ' + time + ' ease-in-out');
+    obj.css('-o-transition', 'all ' + time + ' ease-in-out');
+    obj.css('transition', 'all ' + time + ' ease-in-out');
+
+    origin = '50% 50%';
+    obj.css('-webkit-transform-origin', origin);
+    obj.css('-moz-transform-origin', origin);
+    obj.css('-o-transform-origin', origin);
+    obj.css('transform-origin', origin);
+
+    
+    obj.css('-webkit-transform', 'rotate(' + degree + 'deg)');
+    obj.css('-moz-transform', 'rotate(' + degree + 'deg)');
+    obj.css('-o-transform', 'rotate(' + degree + 'deg)');
+    obj.css('transform', 'rotate(' + degree + 'deg)');
+  }
+}
+
+function setGauge(gaugeId, indicatorName, degree, value, time) {
+  // lets play with the speed
+  var currentAngle = 0; 
+  var direction = 1;  // default positive
+
+  var obj = $('#instrument' + gaugeId + '_' + indicatorName);
+
+  if (obj.length > 0) {
+    obj.css('-webkit-transition', 'all ' + time + ' ease-in-out');
+    obj.css('-moz-transition', 'all ' + time + ' ease-in-out');
+    obj.css('-o-transition', 'all ' + time + ' ease-in-out');
+    obj.css('transition', 'all ' + time + ' ease-in-out');
+
+    origin = '50% 50%';
+    obj.css('-webkit-transform-origin', origin);
+    obj.css('-moz-transform-origin', origin);
+    obj.css('-o-transform-origin', origin);
+    obj.css('transform-origin', origin);
+
+    
+    obj.css('-webkit-transform', 'rotate(' + degree + 'deg) translate(0px, ' + value + ')');
+    obj.css('-moz-transform', 'rotate(' + degree + 'deg) translate(0px, ' + value + ')');
+    obj.css('-o-transform', 'rotate(' + degree + 'deg) translate(0px, ' + value + ')');
+    obj.css('transform', 'rotate(' + degree + 'deg) translate(0px, ' + value + ')');
+  }
+}
+
+/*
+ * showGauge() displays a panel, creating it if it doesn't exist
+ * 
+ * gauge - the gauge to display
+ *
+ * returns true if the panel is sucessfully displayed
+ */
+function showGauge(gaugeSetting, parentId) {
+  // default values
+  /* TODO: add in x, y so as to be able to set where it is when displaying for the first time
+  panelWidth = (typeof optionalArg === "undefined") ? '100%' : panelWidth;
+  panelHeight = (typeof optionalArg === "undefined") ? '100%' : panelHeight;
+  x = (typeof optionalArg === "undefined") ? '100px' : x;
+  y = (typeof optionalArg === "undefined") ? '100px' : y;
+  */
+  
+  // if the panel doesn't exist then add it
+  if ($('#' + gaugeSetting.gaugeId).length <= 0) {
+    // create the div with the appropriate images
+			    
+    // NOTE: when not using img to load the svg, need to overlay a transparent div so drag'n'drop will still work, don't really need it here
+    // TODO: check removing the drag div
+    
+    var gaugeHTML = '';
+
+    gaugeHTML +=
+      '<div ' + 'id="' + gaugeSetting.gaugeId + '" class="viewPanel">';
+    
+    if(gaugeSetting.gauge.contentIsCanvas) {
+      gaugeHTML +=
+	'<canvas id="canvas' + gaugeSetting.gaugeId + '" class="gaugeOverlay" width="' + gaugeSetting.gauge.width + '" height="' + gaugeSetting.gauge.height + '" >no Canvas for you</canvas>';
+    } else {
+      // some gauges may not have a background
+      if(typeof gaugeSetting.gauge.backgroundImg != "undefined") {
+	gaugeHTML += 
+	'<img id="instrument' + gaugeSetting.gaugeId + '_background" class="gaugeOverlay gaugeBackground" src="' + gaugeSetting.gauge.backgroundImg + '" width="' + gaugeSetting.gauge.width + '" height="' + gaugeSetting.gauge.height + '" />';
+      }
+
+      // add the dial image
+      if(typeof gaugeSetting.gauge.dialImg != "undefined") {
+	gaugeHTML += 
+	'<img id="instrument' + gaugeSetting.gaugeId + '_dial" class="gaugeOverlay gaugeBackground" src="' + gaugeSetting.gauge.dialImg + '" width="' + gaugeSetting.gauge.width + '" height="' + gaugeSetting.gauge.height + '" />';
+      }
+  
+      // if the first needle is specified, then set
+      if(typeof gaugeSetting.gauge.needleImg1 != "undefined") {
+	if(typeof gaugeSetting.gauge.needleImg1XOffset != "undefined") {
+	gaugeHTML += 
+	//'<img id="instrument' + gauge.name + '_needle1"    class="gaugeOverlay gaugeNeedle"     src="' + gauge.needleImg1    + '" width="' + gauge.width + '" height="' + gauge.needleImg1Height + '" />';
+	'<img id="instrument' + gaugeSetting.gaugeId + '_' + Gauge.NEEDLE_1 + '"    class="gaugeOverlay gaugeNeedle"     src="' + gaugeSetting.gauge.needleImg1    + '" width="' + gaugeSetting.gauge.width + '" style="top: ' + gaugeSetting.gauge.needleImg1XOffset + '"/>';
+	} else {
+	gaugeHTML += 
+	//'<img id="instrument' + gauge.name + '_needle1"    class="gaugeOverlay gaugeNeedle"     src="' + gauge.needleImg1    + '" width="' + gauge.width + '" height="' + gauge.needleImg1Height + '" />';
+	'<img id="instrument' + gaugeSetting.gaugeId + '_' + Gauge.NEEDLE_1 + '"    class="gaugeOverlay gaugeNeedle"     src="' + gaugeSetting.gauge.needleImg1    + '" width="' + gaugeSetting.gauge.width + '" />';
+	}
+      }
+	
+      // if the second needle is specified, then set
+      if(typeof gaugeSetting.gauge.needleImg2 != "undefined") {
+	gaugeHTML += 
+	'<img id="instrument' + gaugeSetting.gaugeId + '_' + Gauge.NEEDLE_2 + '"    class="gaugeOverlay gaugeNeedle"     src="' + gaugeSetting.gauge.needleImg2    + '" width="' + gaugeSetting.gauge.width + '" height="' + gaugeSetting.gauge.height + '" />';
+      }
+	
+      // if the third needle is specified, then set
+      if(typeof gaugeSetting.gauge.needleImg3 != "undefined") {
+	gaugeHTML += 
+	'<img id="instrument' + gaugeSetting.gaugeId + '_' + Gauge.NEEDLE_3 + '"    class="gaugeOverlay gaugeNeedle"     src="' + gaugeSetting.gauge.needleImg3    + '" width="' + gaugeSetting.gauge.width + '" height="' + gaugeSetting.gauge.height + '" />';
+      }
+
+      if(typeof gaugeSetting.gauge.overlayImg != "undefined") {
+	gaugeHTML += 
+	  '<img id="instrument' + gaugeSetting.gaugeId + '_overlay" class="gaugeOverlay gaugeForeground" src="' + gaugeSetting.gauge.overlayImg + '" width="' + gaugeSetting.gauge.width + '" height="' + gaugeSetting.gauge.height + '" />';
+      }
+	
+      if(typeof gaugeSetting.gauge.foregroundImg != "undefined") {
+	gaugeHTML += 
+	  '<img id="instrument' + gaugeSetting.gaugeId + '_foreground" class="gaugeOverlay gaugeForeground" src="' + gaugeSetting.gauge.foregroundImg + '" width="' + gaugeSetting.gauge.width + '" height="' + gaugeSetting.gauge.foregroundHeight + '" />';
+      }
+    }
+      
+    gaugeHTML += 
+      '<div id="gauge_' + gaugeSetting.gaugeId + 'Drag" class="gaugeDrag" width="' + gaugeSetting.gauge.width + '" height="' + gaugeSetting.gauge.height + '" />' +
+      '</div>';
+
+    if(typeof parentId === "undefined") {
+      // TODO: need a better fallback than this...
+      $(document.body).append(gaugeHTML);
+    } else {
+      $('#' + parentId).append(gaugeHTML);
+    }
+     
+    if(typeof gaugeSetting.gauge.mask != "undefined") {
+      $('#' + gaugeSetting.gaugeId).css('-webkit-mask-image', 'url(' + gaugeSetting.gauge.mask + ')');
+    }
+     
+    panelElement = document.getElementById(gaugeSetting.gaugeId);
+      
+    // add the touch handler for dragging
+    panelElement.addEventListener("touchstart", touchHandler, true);
+    panelElement.addEventListener("touchmove", touchHandler, true);
+    panelElement.addEventListener("touchend", touchHandler, true);
+    panelElement.addEventListener("touchcancel", touchHandler, true);
+
+    // todo: only set to draggable based on condition
+    // set it draggable
+    // test if we can use panelElement instead of searching for it again
+    $("#" + gaugeSetting.gaugeId).draggable({
+      grid: [5, 5],
+      containment: 'parent',
+      opacity: 0.50,
+      snap: true,
+      snapMode: 'outer',
+      snapTolerance: 5,
+      revert:false
+    });
+
+    // as we are creating it, set the position to top left
+    
+    $('#' + gaugeSetting.gaugeId).css({
+	  position: 'absolute',
+	  'z-index': 50,
+      top : gaugeSetting.y,
+      left : gaugeSetting.x
+	});
+  }
+  
+  // show the panel 
+  // todo: add animation
+  $('#' + gaugeSetting.gaugeId).show();
+  
+  return true;
+}
+
+/*
+ * hideGauge() - disables a panel based on a toggle control and uses SVG for the contents
+ *
+ * gaugeId: the id for the gauge that is being hidden
+ *
+ * returns true if panel is hidden
+ * 
+ * Example:
+ * speedEnabled = !hideGauge('speedPanel')
+ */
+function hideGauge(gaugeId) {
+  // hide the panel for the gauge
+  // todo: add animation
+  $('#' + gaugeId).hide();
+  
+  return true;
+}
+
+// shim with requestAnimationFrame/cancelAnimationFrame - sourced from http://creativejs.com/resources/requestanimationframe/
+// requestAnimationFrame polyfill by Erik Möller
+// fixes from Paul Irish and Tino Zijdel
+
+// TODO: which is better, this or the Paul Irish/Jerome Etienne Notes one?
+(function() {
+    var lastTime = 0;
+    var vendors = ['ms', 'moz', 'webkit', 'o'];
+    for(var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x) {
+        window.requestAnimationFrame = window[vendors[x]+'RequestAnimationFrame'];
+        window.cancelAnimationFrame = window[vendors[x]+'CancelAnimationFrame'] 
+                                   || window[vendors[x]+'CancelRequestAnimationFrame'];
+    }
+ 
+    if (!window.requestAnimationFrame)
+        window.requestAnimationFrame = function(callback, element) {
+            var currTime = new Date().getTime();
+            var timeToCall = Math.max(0, 16 - (currTime - lastTime));
+            var id = window.setTimeout(function() { callback(currTime + timeToCall); }, 
+              timeToCall);
+            lastTime = currTime + timeToCall;
+            return id;
+        };
+ 
+    if (!window.cancelAnimationFrame)
+        window.cancelAnimationFrame = function(id) {
+            clearTimeout(id);
+        };
+}());
+
+
+// shim layer with setTimeout fallback, originally by Paul Irish
+// http://paulirish.com/2011/requestanimationframe-for-smart-animating/
+/*
+window.requestAnimFrame = (function(){
+    return  window.requestAnimationFrame   || 
+        window.webkitRequestAnimationFrame || 
+        window.mozRequestAnimationFrame    || 
+        window.oRequestAnimationFrame      || 
+        window.msRequestAnimationFrame     || 
+        function(callback, element){
+            return window.setTimeout(callback, 1000 / 60);
+        };
+})();
+*/
+
+// shim layer for cancel, derived from Paul Irish, by Jerome Etienne Notes
+/*
+window.cancelRequestAnimFrame = ( function() {
+    return window.cancelAnimationFrame           ||
+        window.webkitCancelRequestAnimationFrame ||
+        window.mozCancelRequestAnimationFrame    ||
+        window.oCancelRequestAnimationFrame      ||
+        window.msCancelRequestAnimationFrame     ||
+        clearTimeout
+} )();
+*/
+
+function serverConnected(e, actionBar) {
+  // update action bar on connection
+  if(actionBar) {
+    actionBar.disableAction(ActionBar.CONNECT);
+    actionBar.enableAction(ActionBar.DISCONNECT);
+  }
+}
+
+function serverDisconnected(e, server, actionBar) {
+  // update action bar on connection
+  if(actionBar) {
+    actionBar.enableAction(ActionBar.CONNECT);
+    actionBar.disableAction(ActionBar.DISCONNECT);
+  }
+  
+  // remove vehicles for that server
+  var vehicles = contentManager.getVehiclesForServer(server.name);
+  
+  for(var i = 0, l = vehicles.length; i < l; i++) {
+    // unload the ui for the server
+    removeVehicleFromSidebar(vehicles[i], server);
+  }
+  
+  // remove the vehicles from the content manager
+  contentManager.removeVehiclesFromServer(server.name);
+}
+
+function receivedTelemetry(server, e) {
+  // console.log("received telemetry from server " + server.name + " for vehicle " + e);
+
+  var vehicles = contentManager.getVehiclesForServer(server.name);
+  
+  // remoteVehicles["Asterix"][0].id === e.id
+  
+  for(var i = 0, l = vehicles.length; i < l; i++) {
+    if(vehicles[i].id === e.id) {
+      // update this one
+      updateVehicleTelemetry(server, vehicles[i], e);
+      break;
+    }
+  }
+}
+
+
+// TODO: add handling for errors
+function serverError(e) {
+  // document.getElementById('chat').innerHTML = "There was an error: " + event.data;
+}
+
+function updateVehicleTelemetry(server, vehicle, telemetry) {
+
+  // update the vehicle
+  vehicle.telemetry = telemetry;
+
+  // if the vehicle is the currently selected vehicle, then update the widgets
+  if(contentManager.currentVehicle.id === vehicle.id) {
+    setTelemetry(telemetry);
+  }
+}
+
+function setTelemetry(telemetry) {
+  if(!telemetry) {
+    return;
+  }
+  // temperature is not reported in V1
+  // setGaugeAngle('gaugeId', Gauge.NEEDLE_1, 90, '750ms');
+  
+  var time = 0;
+  
+  console.log("yaw: " + telemetry.attitude.yaw);
+  
+  // heading is atttiude.yaw?
+  setGaugeAngle(VEHICLE_CONTENT + TELEMETRY_SUB_ID + Gauge.HEADING, Gauge.NEEDLE_1, telemetry.attitude.yaw, time + 'ms');
+  
+  // vertical speed indicator m/s
+  setGaugeAngle(VEHICLE_CONTENT + TELEMETRY_SUB_ID + Gauge.VSI, Gauge.NEEDLE_1, 98, time + 'ms');
+  
+  // altimeter in meters, needle 1 is from 0m to 10m - each bar is 20cm, needle 2 is from 0m to 0 to 1000m, each bar is 20m
+  // 0 degrees is 0, 90 degress is 5 and 360 degreess is 10
+  //
+  // needle 1, 10m = 360, 1m = 360 / 10
+  // needle 2, 1000m = 360, 100m = 360 / 10, 10m = 360 / 100, 1m = 360 / 1000
+  //
+  // thus needle 1 is altitude mod 10 * 36 and needle 2 is altitude / 1000
+  
+  var altitudeNeedle1 = (telemetry.altitude % 10) * 36;
+  var altitudeNeedle2 = (telemetry.altitude / 1000) * 36;
+  
+  setGaugeAngle(VEHICLE_CONTENT + TELEMETRY_SUB_ID + Gauge.ALTIMETER, Gauge.NEEDLE_1, altitudeNeedle1, time + 'ms');
+  setGaugeAngle(VEHICLE_CONTENT + TELEMETRY_SUB_ID + Gauge.ALTIMETER, Gauge.NEEDLE_2, altitudeNeedle2, time + 'ms');
+  
+  // speed is in meters, needle 1 is from 0m/s to 200m/s
+  // 0 degrees is 0, 64.16 degress is 100
+  //
+  // thus needle 1 is speed * 1.5586 (100/64.16)
+  var speed = telemetry.speed * 1.5586;
+  
+  setGaugeAngle(VEHICLE_CONTENT + TELEMETRY_SUB_ID + Gauge.SPEED, Gauge.NEEDLE_1, speed, time + 'ms');
+
+  var roll = 45;
+  var pitch = 25;
+  
+  // pitch is based on pixels, 18px per 10 degrees, so pitch is multiplied by 1.8 to determine the px, should we round?
+  var pitch = telemetry.attitude.pitch * 1.8;
+  
+  setGaugeAngle(VEHICLE_CONTENT + TELEMETRY_SUB_ID + Gauge.ATTITUDE, Gauge.NEEDLE_2, telemetry.attitude.roll, time + 'ms');
+  setGauge(VEHICLE_CONTENT + TELEMETRY_SUB_ID + Gauge.ATTITUDE, Gauge.NEEDLE_1, telemetry.attitude.roll, pitch + 'px', time + 'ms');
+  // gaugeId, gauge, indicatorName, degree, value, time
+
+}
+
+
+</script>
+  </head>
+  <body>
+    <div id="leftSidebar" class="sideBar">
+      <div class="scroller">
+        <div id="homeControl" class="sidebarControlBar">
+          <div class="sidebarControlIcon"><img src='assets/icons/drawable-xhdpi-v11/ic_action_hanger.png' class="sidebarControlIcon"/></div>
+          <div class="sidebarControlText centered">Home</div>
+        </div>
+        <div id="payloadControl" class="sidebarControlBar">
+          <div class="sidebarControlIcon"><img src='assets/icons/drawable-xhdpi-v11/ic_action_camera.png' class="sidebarControlIcon"/></div>
+          <div class="sidebarControlText centered">Payload</div>
+        </div>
+        <div id="navigationControl" class="sidebarControlBar">
+          <div class="sidebarControlIcon"><img src='assets/icons/drawable-xhdpi-v11/ic_action_map.png' class="sidebarControlIcon"/></div>
+          <div class="sidebarControlText centered">Navigation</div>
+        </div>
+        <div id="vehicleGroup" class="sidebarGroup">
+          <div class="sidebarGroupHeading leftSidebarGroupHeading">
+            <div id="vehicleGroupTitle" class="sidebarGroupTitle">Vehicles</div>
+          </div>
+        </div>
+        <div id="serverGroup" class="sidebarGroup">
+          <div class="sidebarGroupHeading leftSidebarGroupHeading">
+            <div id="serversGroupTitle" class="sidebarGroupTitle">Servers</div>
+          </div>
+        </div>
+        <div class="sidebarGroupHeading leftSidebarGroupHeading">
+          <div id="preferencsGroupTitle" class="sidebarGroupTitle"></div>
+        </div>
+        <div id="preferencesControl" class="sidebarControlBar">
+          <div class="sidebarControlIcon"><img src='assets/icons/drawable-xhdpi-v11/ic_action_settings.png' class="sidebarControlIcon"/></div>
+          <div class="sidebarControlText centered">Preferences</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="rightSidebar" class="sideBar rightSidebar scroller">
+      <div id="rightScroller" class="scroller">
+        <div id="homeControl2" class="sidebarControlBar">
+          <div class="sidebarControlIcon"><img src='assets/icons/drawable-xhdpi-v11/ic_action_hanger.png' class="sidebarControlIcon"/></div>
+          <div class="sidebarControlText centered">Home</div>
+        </div>
+        <div id="payloadControl2" class="sidebarControlBar">
+          <div class="sidebarControlIcon"><img src='assets/icons/drawable-xhdpi-v11/ic_action_camera.png' class="sidebarControlIcon"/></div>
+          <div class="sidebarControlText centered">Payload</div>
+        </div>
+        <div id="navigationControl2" class="sidebarControlBar">
+          <div class="sidebarControlIcon"><img src='assets/icons/drawable-xhdpi-v11/ic_action_map.png' class="sidebarControlIcon"/></div>
+          <div class="sidebarControlText centered">Navigation</div>
+        </div>
+        <div id="vehicleGroup2" class="sidebarGroup">
+          <div class="sidebarGroupHeading leftSidebarGroupHeading">
+            <div id="vehicleGroupTitle2" class="sidebarGroupTitle">Vehicles</div>
+          </div>
+        </div>
+        <div id="serverGroup2" class="sidebarGroup">
+          <div class="sidebarGroupHeading leftSidebarGroupHeading">
+            <div id="serversGroupTitle2" class="sidebarGroupTitle">Servers</div>
+          </div>
+        </div>
+        <div class="sidebarGroupHeading leftSidebarGroupHeading">
+          <div id="preferencsGroupTitle2" class="sidebarGroupTitle"></div>
+        </div>
+        <div id="preferencesControl2" class="sidebarControlBar">
+          <div class="sidebarControlIcon"><img src='assets/icons/drawable-xhdpi-v11/ic_action_settings.png' class="sidebarControlIcon"/></div>
+          <div class="sidebarControlText centered">Preferences</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="mainApplication" class="mainApplication content">
+      <!-- app content goes here -->
+    </div>
+
+    <!-- radial menu for vehicle -->
+    <ul class="radial" id="vehicleMenu">
+      <li>
+        <a href="#" id="menuVehicleEditDefaults">Properties</a>
+        <span>+</span>
+      </li>
+      <li>
+        <a href="#" id="menuVehicleSelectVehicle">Select vehicle</a>
+        <span>+</span>
+      </li>
+      <li>
+        <a href="#" id="menuVehicleDeselectVehicle">Deselect vehicle</a>
+        <span>+</span>
+      </li>
+      <li>
+        <a href="#" id="menuVehicleReverseDirection">Reverse Direction</a>
+        <span>-</span>
+      </li>
+      <li>
+        <a href="#" id="menuVehicleDeletePath">Delete path</a>
+        <span>+</span>
+      </li>
+      <li>
+        <a href="#" id="menuVehicleRemoveVehicle">Remove Vehicle</a>
+        <span>+</span>
+      </li>
+    </ul>
+    <!-- radial menu for navigation points -->
+    <ul class="radial" id="navPointMenu">
+      <li>
+        <a href="#" id="menuPointNavPointProperties">Properties</a>
+        <span>-</span>
+      </li>
+      <li>
+        <a href="#" id="menuPointDeleteNavPoint">Delete</a>
+        <span>-</span>
+      </li>
+      <li>
+        <a href="#" id="menuPointInsertBefore">Insert Before</a>
+        <span>+</span>
+      </li>
+      <li>
+        <a href="#" id="menuPointInsertAfter">Insert After</a>
+        <span>&raquo;</span>
+      </li>
+      <li>
+        <a href="#" id="menuPointLoiterToggle">Loiter Toggle</a>
+        <span>&Xi;</span>
+      </li>
+      <li>
+        <a href="#" id="menuPointReturnToBase">Return Toggle</a>
+        <span>&Xi;</span>
+      </li>
+      <li>
+        <a href="#" id="menuPointTerminusToggle">Terminus Toggle</a>
+        <span>&Theta;</span>
+      </li>
+    </ul>
+    <!-- radial menu for map -->
+    <ul class="radial" id="mapMenu">
+      <li>
+        <a href="#" id="menuMapAddVehicle">Add Vehicle</a>
+        <span>+</span>
+      </li>
+      <li>
+        <a href="#" id="menuMapRemoveAllVehicles">Remove Vehicles</a>
+        <span>-</span>
+      </li>
+      <li>
+        <a href="#" id="menuMapZoomToVehicles">Zoom vehicles</a>
+        <span>[ ]</span>
+      </li>
+    </ul>
+    
+  </body>
+</html>
